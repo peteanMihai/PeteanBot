@@ -17,14 +17,21 @@ public class ExampleBot extends DefaultBWListener {
     private Mirror mirror = new Mirror();
 
     private Game game;
-
+    
     private Player self;
+    
+    
+    //battle logistics as of now
+    private Commander commander;
+    
+    //bad global checks
     private boolean bOneExtractor = false;
     private int barrackCount = 0;
     private boolean bSupplyBlocked = false;
     private boolean bScouted = false;
+    
+    //bad scouting strats
     private Unit scout = null;
-    private HashSet<Builder> builders = new HashSet<Builder>();
     private HashSet<Unit> squad = new HashSet<Unit>();
     private HashSet<Position> enemyBuildingMemory = new HashSet<Position>();
     private HashSet<Unit> workers = new HashSet<Unit>();
@@ -37,46 +44,9 @@ public class ExampleBot extends DefaultBWListener {
         mirror.startGame();	
     }
 
-    public void sendMarines() {
-    	if(squad.size() < 10)
-    		return;
-    	if(self.getUpgradeLevel(UpgradeType.Terran_Infantry_Weapons) == 0)
-    		return;
-    	game.setLocalSpeed(-1);
-    	if(enemyBuildingMemory.size() > 0)
-    	{
-    		Position enemyPosition = null;
-    		while(enemyPosition == null)
-    			enemyPosition = enemyBuildingMemory.iterator().next();
-    		for(Unit myUnit: squad) {
-    			if(!myUnit.isIdle())
-    				continue;
-    			Unit closeEnemy = seeEnemy(myUnit);
-    			if(closeEnemy == null) {
-    				myUnit.attack(enemyPosition);
-    				game.drawLineMap(myUnit.getPosition(), enemyPosition, Color.Red);
-    			}
-    			else {
-    				myUnit.attack(closeEnemy);
-    				game.drawLineMap(myUnit.getPosition(), closeEnemy.getPosition(), Color.Red);
-
-    			}
-    		}
-    	}
-    }
     
-    public Unit seeEnemy(Unit myUnit) {
-    	int bestDistance = 999999;
-    	Unit bestEnemy = null;
-    	for(Unit enemy: myUnit.getUnitsInRadius(100)) {
-    		if(enemy.getPlayer() == game.enemy())
-    			if(bestDistance > myUnit.getDistance(enemy)) {
-    				bestDistance = myUnit.getDistance(enemy);
-    				bestEnemy = enemy;
-    			}	    			
-    	}
-    	return bestEnemy;
-    }
+    
+    
     
     public void trainMarines() {
     	for(Unit myUnit: self.getUnits()) {
@@ -119,48 +89,43 @@ public class ExampleBot extends DefaultBWListener {
     			if(!myUnit.isIdle() && !myUnit.isGatheringMinerals())
     				continue;
     			TilePosition buildTile = this.getBuildTile(myUnit, building, self.getStartLocation());
-    			builders.add(new Builder(myUnit,building));
-    			workers.remove(myUnit);
     			myUnit.build(building, buildTile);
     			break;
     		}
     }
    
     public void sendIdleMine() {
-    	for(Builder builder: builders)
-    		if(builder.getBuilder().isIdle()) {
-    			workers.add(builder.getBuilder());
-    			builders.remove(builder);
-    		}
         //if it's a worker and it's idle, send it to the closest mineral patch
     	for(Unit myUnit : workers) { 
-    		
     		if (myUnit.isIdle()) {
-    			
-    			
     			Unit closestMineral = null;
     			//find the closest mineral
     			for (Unit neutralUnit : game.neutral().getUnits()) 
     				if (neutralUnit.getType().isMineralField()) 
     					if (closestMineral == null || myUnit.getDistance(neutralUnit) < myUnit.getDistance(closestMineral)) 
-    						closestMineral = neutralUnit;
+    						{
+    							closestMineral = neutralUnit;
+    			        		//System.out.println("go mine ya fucker");
+    						}
     					
         //if a mineral patch was found, send the worker to gather it
         if (closestMineral != null)
             myUnit.gather(closestMineral, false);
     		}
     	}
-    	
-      
     }
 
     public void evaluateGame() {
+    	int buildOrderLength = buildOrder.size();
     	boolean alreadyBuilding = false;
-    		for(Builder builder: builders)
-        		if(builder.getBuilding( )== UnitType.Terran_Supply_Depot)
-        			alreadyBuilding = true;
+    		for(Unit myUnit: workers) {
+    			if(myUnit.getType() == UnitType.Terran_SCV)
+    				if( myUnit.getBuildType() == UnitType.Terran_Supply_Depot)
+    					alreadyBuilding = true;
+    		}
+        		
     	
-    	if(self.supplyTotal() < self.supplyUsed()  + 10 && !alreadyBuilding && !buildOrder.contains(UnitType.Terran_Supply_Depot))
+    	if(self.supplyTotal() <= self.supplyUsed() + 10 && !alreadyBuilding && !buildOrder.contains(UnitType.Terran_Supply_Depot))
 			buildOrder.addFirst(UnitType.Terran_Supply_Depot);
     		
 		boolean bHaveEngineeringBay = false;
@@ -172,7 +137,7 @@ public class ExampleBot extends DefaultBWListener {
 			}
 			if(myUnit.getBuildType() == UnitType.Terran_Engineering_Bay)
 				bHaveEngineeringBay = true;
-		}	
+			}	
 			if(!bHaveEngineeringBay && !buildOrder.contains(UnitType.Terran_Engineering_Bay)) {
 				buildOrder.addFirst(UnitType.Terran_Engineering_Bay);
 			}
@@ -187,7 +152,8 @@ public class ExampleBot extends DefaultBWListener {
 
 		if(self.minerals() > 300 && squad.size() < 30 && barrackCount < 3 && !bHavebarrack) 
 			buildOrder.addFirst(UnitType.Terran_Barracks);
-		System.out.println(buildOrder.toString());
+		if(buildOrderLength != buildOrder.size())
+			System.out.println(game.getFrameCount() + " " + buildOrder.toString());
     }
     
     @Override
@@ -238,14 +204,9 @@ public class ExampleBot extends DefaultBWListener {
         System.out.println("Map data ready");
         
         int i = 0;
-        
-        for(BaseLocation baseLocation : BWTA.getBaseLocations()){
-        	System.out.println("Base location #" + (++i) + ". Printing location's region polygon:");
-        	for(Position position : baseLocation.getRegion().getPolygon().getPoints()){
-        		System.out.print(position + ", ");
-        	}
-        }
-        
+
+        //initialize commander
+        commander = new Commander(game, self);
         
         //initialize starting locations for scout
         for(TilePosition location: game.getStartLocations()) {
@@ -263,15 +224,17 @@ public class ExampleBot extends DefaultBWListener {
         game.drawTextScreen(10, 10, "Is supply blocked: " + bSupplyBlocked);
         game.drawTextScreen(10, 20, "Worker count: " + workers.size());
         game.drawTextScreen(10, 30, "Squad size: " + squad.size());
-        game.drawTextScreen(10, 40, "Builders size: " + builders.size());
         if(scout != null)
         	game.drawCircleMap(scout.getPosition(), 3, Color.Green);
         bSupplyBlocked = self.supplyTotal() <= self.supplyUsed() ? true : false;
         if(buildOrder.size() > 0)
         	if(self.minerals() > buildOrder.peekLast().mineralPrice()) {
+        		//System.out.println("checking das build order");
         		buildClose(buildOrder.removeLast());
+        		if(buildOrder.size() > 0)
+        			System.out.println(game.getFrameCount() + " " +buildOrder.toString());
         	}
-        
+        this.evaluateGame();
         /* Old building algorithm. Don't talk to me
         if(bSupplyBlocked && self.minerals() >= 100) {
         	boolean alreadyBuilding = false;
@@ -290,7 +253,7 @@ public class ExampleBot extends DefaultBWListener {
         	bOneExtractor = true;
         }
         */
-        this.evaluateGame();
+        //System.out.println("evaluate game");
         for (Unit u : game.enemy().getUnits()) {
         	//if this unit is in fact a building
         	if (u.getType().isBuilding()) {
@@ -298,7 +261,7 @@ public class ExampleBot extends DefaultBWListener {
         		if (!enemyBuildingMemory.contains(u.getPosition())) enemyBuildingMemory.add(u.getPosition());
         	}
         }
-        
+        //System.out.println("trainingbois");
         //iterate through my units
         for (Unit myUnit : self.getUnits()) {
             //if there's enough minerals, train an SCV
@@ -306,12 +269,13 @@ public class ExampleBot extends DefaultBWListener {
                 myUnit.train(UnitType.Terran_SCV);
             }
          }
+        
         if(!bScouted)
         	this.scout();
         this.sendIdleMine();
         if(barrackCount > 0)
         	trainMarines();
-        this.sendMarines();
+        commander.sendMarines(squad, enemyBuildingMemory);
         this.upgrades();
         //draw my units on screen
         //game.drawTextScreen(10, 25, units.toString());
@@ -364,7 +328,7 @@ public class ExampleBot extends DefaultBWListener {
  		maxDist += 2;
  	}
 
- 	if (ret == null) game.printf("Unable to find suitable build position for "+buildingType.toString());
+ 	if (ret == null) game.printf("Unable to find suitable build position for " + buildingType.toString());
  	return ret;
  }
     
