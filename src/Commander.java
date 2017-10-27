@@ -12,6 +12,8 @@ import bwapi.UpgradeType;
 public class Commander {
 	private static Game game;
 	private static Player me;
+	public HashSet<Unit> squad = new HashSet<Unit>();
+	
 	public Commander(Game theGame, Player me) {
 		this.game = theGame;
 		this.me = me;
@@ -87,4 +89,11 @@ public class Commander {
     		}
     	}
     } 
+	
+	public void evaluateGame() {
+		if(squad.size() > 0)
+    		for(Unit myUnit: squad) {
+    			game.drawTextMap(myUnit.getPosition(), this.evaluateThreat(myUnit) + " ");
+    		}
+	}
 }
