@@ -36,8 +36,7 @@ public class ExampleBot extends DefaultBWListener {
     //bad scouting strats
     private Unit scout = null;
     
-    private HashSet<Position> enemyBuildingMemory = new HashSet<Position>();
-    
+    private ArrayList<Unit> bunkers = new ArrayList<Unit>();
     private HashSet<Unit> gasExtractors = new HashSet<Unit>();
     private Stack<TilePosition> startingLocations = new Stack<TilePosition>();
 
@@ -47,6 +46,7 @@ public class ExampleBot extends DefaultBWListener {
     }
 
     public void trainMarines() {
+    	System.out.println("treining merins");
     	for(Unit myUnit: self.getUnits()) {
     		if(myUnit.getType() == UnitType.Terran_Barracks)
     			myUnit.train(UnitType.Terran_Marine);
@@ -60,7 +60,7 @@ public class ExampleBot extends DefaultBWListener {
     			scout.stop();
     			builder.workers.remove(scout);
     		}
-    	if(enemyBuildingMemory.size() > 0) {
+    	if(commander.enemyBuildingMemory.size() > 0) {
     		scout.move(self.getStartLocation().toPosition());
     		builder.workers.add(scout);
     		scout = null;
@@ -76,7 +76,10 @@ public class ExampleBot extends DefaultBWListener {
     public void evaluateGame() {
 		builder.evaluateGame();
     	commander.evaluateGame();
-    
+    	for(Unit squadee: commander.squad) {
+    		for(Unit bunker: bunkers)
+    			commander.getInBunker(bunker, squadee);
+    	}
     	
     }
     
@@ -87,6 +90,7 @@ public class ExampleBot extends DefaultBWListener {
     
     @Override
     public void onUnitComplete(Unit unit) {
+    	
         if(unit.getType() == UnitType.Terran_SCV) {
         	builder.workers.add(unit);
         }
@@ -96,6 +100,8 @@ public class ExampleBot extends DefaultBWListener {
         	commander.squad.add(unit);
         if(unit.getType() == UnitType.Terran_Refinery)
         	gasExtractors.add(unit);
+        if(unit.getType() == UnitType.Terran_Bunker)
+        	bunkers.add(unit);
     }
     
     @Override
@@ -146,58 +152,30 @@ public class ExampleBot extends DefaultBWListener {
     @Override
     public void onFrame() {
     	
+    	
     	//debug business
         game.drawTextScreen(10, 10, "Is supply blocked: " + (self.supplyUsed() >= self.supplyTotal()));
         game.drawTextScreen(10, 20, "Worker count: " + builder.workers.size());
         game.drawTextScreen(10, 30, "Squad size: " + commander.squad.size());
+        game.drawTextScreen(10, 40, "buildOrder: " + builder.buildOrder);
+    	game.drawTextScreen(10, 50, "beingBuilt: " + builder.areBeingBuilt);
+    	
         if(scout != null)
         	game.drawCircleMap(scout.getPosition(), 3, Color.Green);
        
-        this.evaluateGame();
-        /* Old building algorithm. Don't talk to me
-        if(bSupplyBlocked && self.minerals() >= 100) {
-        	boolean alreadyBuilding = false;
-        	for(Builder builder: builders)
-        		if(builder.getBuilding( )== UnitType.Terran_Supply_Depot)
-        			alreadyBuilding = true;
-        	if(!alreadyBuilding)
-        		this.buildClose(UnitType.Terran_Supply_Depot);
-        }
-        
-        if(self.minerals() > 150 && workers.size() > 10 && barrackCount < 4 && !bSupplyBlocked)
-        	this.buildClose(UnitType.Terran_Barracks);
-        	
-        if(self.minerals() > 150 && workers.size() > 12 && !bOneExtractor){
-        	this.buildClose(UnitType.Terran_Refinery);
-        	bOneExtractor = true;
-        }
-        */
-        //System.out.println("evaluate game");
-        for (Unit u : game.enemy().getUnits()) {
-        	//if this unit is in fact a building
-        	if (u.getType().isBuilding()) {
-        		//check if we have it's position in memory and add it if we don't
-        		if (!enemyBuildingMemory.contains(u.getPosition())) enemyBuildingMemory.add(u.getPosition());
-        	}
-        }
-        //System.out.println("trainingbois");
-        //iterate through my units
-        for (Unit myUnit : self.getUnits()) {
-            //if there's enough minerals, train an SCV
-            if (myUnit.getType() == UnitType.Terran_Command_Center && self.minerals() >= 50 && builder.workers.size() < 15) {
-                myUnit.train(UnitType.Terran_SCV);
-            }
-         }
+        if(builder.barrackCount > 0)
+        	trainMarines();
         
         if(!bScouted)
         	this.scout();
-        builder.sendIdleMine();
-        if(builder.barrackCount > 0)
-        	trainMarines();
-        commander.sendMarines(commander.squad, enemyBuildingMemory);
-        //draw my units on screen
-        //game.drawTextScreen(10, 25, units.toString());
-    }
+        
+        this.evaluateGame();
+       
+        //System.out.println("evaluate game");
+        //System.out.println("trainingbois");
+       
+        
+       	}
 
 
     

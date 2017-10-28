@@ -6,19 +6,27 @@ import bwapi.Color;
 import bwapi.Game;
 import bwapi.Player;
 import bwapi.Position;
+import bwapi.TilePosition;
 import bwapi.Unit;
+import bwapi.UnitType;
 import bwapi.UpgradeType;
 
 public class Commander {
 	private static Game game;
 	private static Player me;
 	public HashSet<Unit> squad = new HashSet<Unit>();
-	
+	public HashSet<Position> enemyBuildingMemory = new HashSet<Position>();
+	public TilePosition myTarget;
 	public Commander(Game theGame, Player me) {
 		this.game = theGame;
 		this.me = me;
 	}
 	
+	public void getInBunker(Unit bunker, Unit unit) {
+		if(bunker.getType() != UnitType.Terran_Bunker || !unit.canMove() || !bunker.canLoad(unit))
+			return;
+		unit.rightClick(bunker);
+	}
 	
 	public int evaluateThreat(Unit unit) {
 		int threatLevel = 0;
@@ -63,23 +71,16 @@ public class Commander {
     	return bestEnemy;
     }
 	
-	public void sendMarines(HashSet<Unit> squad, HashSet<Position> enemyBuildingMemory) {
-    	if(squad.size() < 10)
-    		return;
-    	if(me.getUpgradeLevel(UpgradeType.Terran_Infantry_Weapons) == 0)
-    		return;
+	public void sendMarines(HashSet<Unit> squad, TilePosition target) {
     	if(enemyBuildingMemory.size() > 0)
     	{
-    		Position enemyPosition = null;
-    		while(enemyPosition == null)
-    			enemyPosition = enemyBuildingMemory.iterator().next();
     		for(Unit myUnit: squad) {
     			if(!myUnit.isIdle())
     				continue;
     			Unit closeEnemy = seeEnemy(myUnit);
     			if(closeEnemy == null) {
-    				myUnit.attack(enemyPosition);
-    				game.drawLineMap(myUnit.getPosition(), enemyPosition, Color.Red);
+    				myUnit.attack(target.toPosition());
+    				game.drawLineMap(myUnit.getPosition(), target.toPosition(), Color.Red);
     			}
     			else {
     				myUnit.attack(closeEnemy);
@@ -90,10 +91,29 @@ public class Commander {
     	}
     } 
 	
+	public void defendBase() {
+		for(Unit myUnit:squad) {
+			myUnit.move(me.getStartLocation().toPosition());
+		}
+	}
+	
+	public TilePosition establishTarget() {
+		for (Unit u : game.enemy().getUnits()) {
+        	//if this unit is in fact a building
+        	if (u.getType().isBuilding()) {
+        		//check if we have it's position in memory and add it if we don't
+        		if (!enemyBuildingMemory.contains(u.getPosition())) 
+        			enemyBuildingMemory.add(u.getPosition());
+        	}
+        }
+		return enemyBuildingMemory.iterator().next().toTilePosition();
+	}
+	
 	public void evaluateGame() {
-		if(squad.size() > 0)
-    		for(Unit myUnit: squad) {
-    			game.drawTextMap(myUnit.getPosition(), this.evaluateThreat(myUnit) + " ");
-    		}
+		System.out.println("COMMANDER STARTS EVALUATING");
+		myTarget = establishTarget();
+		if(squad.size() >= 30)
+			sendMarines(squad, myTarget);
+		System.out.println("COMMANDER ENDS EVALUATING");
 	}
 }

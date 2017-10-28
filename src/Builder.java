@@ -13,6 +13,7 @@ public class Builder{
 	private static Game game;
 	private static Player me;
     public ArrayDeque<UnitType> buildOrder = new ArrayDeque<UnitType>();
+    public HashSet<UnitType> areBeingBuilt = new HashSet<UnitType>();
 	//had to give access
 	public HashSet<Unit> workers = new HashSet<Unit>();
 	public int barrackCount = 0;
@@ -78,7 +79,6 @@ public class Builder{
     				continue;
     			TilePosition buildTile = this.getBuildTile(myUnit, building, place);
     			myUnit.build(building, buildTile);
-    			System.out.println(building + " " + place + " " + myUnit.getType()+ " is building: " + myUnit.getBuildType());
     			break;
     		}
     }
@@ -133,8 +133,11 @@ public class Builder{
     	for(Unit myUnit: me.getUnits())
     		if(myUnit.getType() == UnitType.Terran_Bunker)
     			return;
-    	if(buildOrder.contains(UnitType.Terran_Bunker) || game.elapsedTime() < 60)
+    	if(buildOrder.contains(UnitType.Terran_Bunker) || game.elapsedTime() < 60 ||
+    			areBeingBuilt.contains(UnitType.Terran_Bunker))
 			return;
+		buildOrder.add(UnitType.Terran_Bunker);
+		buildOrder.add(UnitType.Terran_Bunker);
 		buildOrder.add(UnitType.Terran_Bunker);
     }
     
@@ -143,15 +146,10 @@ public class Builder{
 		for(Unit myUnit: me.getUnits()) {
 			if(myUnit.getType() == UnitType.Terran_Engineering_Bay)
 				bHaveEngineeringBay = true;
-			if(myUnit.getType() != UnitType.Terran_SCV) {
-				continue;
-			}
-			if(myUnit.getBuildType() == UnitType.Terran_Engineering_Bay)
-				bHaveEngineeringBay = true;
-			}	
-			if(!bHaveEngineeringBay && !buildOrder.contains(UnitType.Terran_Engineering_Bay)) {
+			if(!bHaveEngineeringBay && !buildOrder.contains(UnitType.Terran_Engineering_Bay) && !areBeingBuilt.contains(UnitType.Terran_Engineering_Bay)) {
 				buildOrder.addFirst(UnitType.Terran_Engineering_Bay);
 			}
+		}
     }
     
     public boolean alreadyBuilding(UnitType someBuilding) {
@@ -165,31 +163,43 @@ public class Builder{
     public void supply() {
 		if(me.supplyTotal() <= me.supplyUsed() + 10 && 
 				!alreadyBuilding(UnitType.Terran_Supply_Depot) && 
-				!buildOrder.contains(UnitType.Terran_Supply_Depot))
+				!buildOrder.contains(UnitType.Terran_Supply_Depot) && 
+				!areBeingBuilt.contains(UnitType.Terran_Supply_Depot))
 			buildOrder.addFirst(UnitType.Terran_Supply_Depot);
     }
     
+    public void minerals() {
+    	 //iterate through my units
+        for (Unit myUnit : me.getUnits()) {
+            //if there's enough minerals, train an SCV
+            if (myUnit.getType() == UnitType.Terran_Command_Center && me.minerals() >= 50 && workers.size() < 15) {
+                myUnit.train(UnitType.Terran_SCV);
+            }
+         }
+    }
+    
     public void factories() {
-    	boolean bHavebarrack = false;
-		for(Unit myUnit: me.getUnits()) {
-			if(myUnit.getBuildType() == UnitType.Terran_Barracks)
-			bHavebarrack = true;
-		}
-    	if(me.minerals() > 300 && barrackCount < 3 && !buildOrder.contains(UnitType.Terran_Barracks)) {
+    	if(me.minerals() > 300 && barrackCount < 3 && !buildOrder.contains(UnitType.Terran_Barracks) && !areBeingBuilt.contains(UnitType.Terran_Barracks)) {
 			buildOrder.add(UnitType.Terran_Barracks);
 		}
     }
     
     public void evaluateGame() {
-    	
-    	//initial buildOrderStackState?
-    	int buildOrderLength = buildOrder.size();
+    	System.out.println("BUILDER STARTS EVALUATING");
+    	minerals();
+    	evaluateWorkers();
     	upgrades();
     	factories();
     	bunker();
     	supply();
     	this.buildFromStack();
-    	System.out.println("" + this.buildOrder);
+    	sendIdleMine();
+    	System.out.println("BUILDER ENDS EVALUATING");
     }
-    
+    public void evaluateWorkers() {
+    	areBeingBuilt.clear();
+    	for(Unit worker : workers)
+    		if(worker.getBuildType() != null)
+    			areBeingBuilt.add(worker.getBuildType());
+    }
 }
