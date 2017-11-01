@@ -93,7 +93,7 @@ public class Commander {
 	
 	public void defendBase() {
 		for(Unit myUnit:squad) {
-			myUnit.move(me.getStartLocation().toPosition());
+			myUnit.move(me.getStartLocation().toPosition()	);
 		}
 	}
 	
@@ -110,10 +110,8 @@ public class Commander {
 	}
 	
 	public void evaluateGame() {
-		System.out.println("COMMANDER STARTS EVALUATING");
 		myTarget = establishTarget();
 		if(squad.size() >= 30)
 			sendMarines(squad, myTarget);
-		System.out.println("COMMANDER ENDS EVALUATING");
 	}
 }

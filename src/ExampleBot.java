@@ -37,7 +37,7 @@ public class ExampleBot extends DefaultBWListener {
     private Unit scout = null;
     
     private ArrayList<Unit> bunkers = new ArrayList<Unit>();
-    private HashSet<Unit> gasExtractors = new HashSet<Unit>();
+    
     private Stack<TilePosition> startingLocations = new Stack<TilePosition>();
 
     public void run() {
@@ -46,7 +46,6 @@ public class ExampleBot extends DefaultBWListener {
     }
 
     public void trainMarines() {
-    	System.out.println("treining merins");
     	for(Unit myUnit: self.getUnits()) {
     		if(myUnit.getType() == UnitType.Terran_Barracks)
     			myUnit.train(UnitType.Terran_Marine);
@@ -85,7 +84,7 @@ public class ExampleBot extends DefaultBWListener {
     
     @Override
     public void onUnitCreate(Unit unit) {
-    	
+    
     }
     
     @Override
@@ -99,13 +98,18 @@ public class ExampleBot extends DefaultBWListener {
         if(unit.getType() == UnitType.Terran_Marine)
         	commander.squad.add(unit);
         if(unit.getType() == UnitType.Terran_Refinery)
-        	gasExtractors.add(unit);
+        	builder.gasExtractors.add(unit);
         if(unit.getType() == UnitType.Terran_Bunker)
         	bunkers.add(unit);
     }
     
     @Override
     public void onUnitDestroy(Unit unit) {
+    	if(unit.getPlayer().isEnemy(self))
+    		if(unit.getType().isBuilding())
+    			commander.enemyBuildingMemory.remove(unit.getPosition());
+    	
+    	
     	if(unit.getType() == UnitType.Terran_SCV) {
     		builder.workers.remove(unit);
         }
@@ -115,7 +119,7 @@ public class ExampleBot extends DefaultBWListener {
          	commander.squad.remove(unit);
     	 }
     	 if(unit.getType() == UnitType.Terran_Refinery)
-         	gasExtractors.remove(unit);
+         	builder.gasExtractors.remove(unit);
     }
 
     @Override
@@ -152,14 +156,18 @@ public class ExampleBot extends DefaultBWListener {
     @Override
     public void onFrame() {
     	
-    	
     	//debug business
+    	int gasMiners = 0;
+    	for(Unit u: builder.workers) {
+    		if(u.isGatheringGas())
+    			gasMiners++;
+    	}
         game.drawTextScreen(10, 10, "Is supply blocked: " + (self.supplyUsed() >= self.supplyTotal()));
         game.drawTextScreen(10, 20, "Worker count: " + builder.workers.size());
         game.drawTextScreen(10, 30, "Squad size: " + commander.squad.size());
         game.drawTextScreen(10, 40, "buildOrder: " + builder.buildOrder);
     	game.drawTextScreen(10, 50, "beingBuilt: " + builder.areBeingBuilt);
-    	
+    	game.drawTextScreen(10, 60, "gas minners: " + gasMiners);    	
         if(scout != null)
         	game.drawCircleMap(scout.getPosition(), 3, Color.Green);
        

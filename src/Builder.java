@@ -1,4 +1,5 @@
 import java.util.ArrayDeque;
+import java.util.ArrayList;
 import java.util.HashSet;
 import java.util.List;
 
@@ -12,6 +13,9 @@ import bwapi.UpgradeType;
 public class Builder{
 	private static Game game;
 	private static Player me;
+	
+	//bad bad code
+	public HashSet<Unit> gasExtractors = new HashSet<Unit>();
     public ArrayDeque<UnitType> buildOrder = new ArrayDeque<UnitType>();
     public HashSet<UnitType> areBeingBuilt = new HashSet<UnitType>();
 	//had to give access
@@ -84,6 +88,7 @@ public class Builder{
     }
     
     public void initBuildStack() {
+    	buildOrder.addFirst(UnitType.Terran_Barracks);
     	buildOrder.addFirst(UnitType.Terran_Refinery);
     }
     
@@ -146,9 +151,14 @@ public class Builder{
 		for(Unit myUnit: me.getUnits()) {
 			if(myUnit.getType() == UnitType.Terran_Engineering_Bay)
 				bHaveEngineeringBay = true;
-			if(!bHaveEngineeringBay && !buildOrder.contains(UnitType.Terran_Engineering_Bay) && !areBeingBuilt.contains(UnitType.Terran_Engineering_Bay)) {
-				buildOrder.addFirst(UnitType.Terran_Engineering_Bay);
-			}
+		}
+		if(!bHaveEngineeringBay && 
+			!buildOrder.contains(UnitType.Terran_Engineering_Bay) && 
+			!areBeingBuilt.contains(UnitType.Terran_Engineering_Bay) &&
+			!alreadyBuilding(UnitType.Terran_Engineering_Bay) &&
+			barrackCount > 1) {
+				buildOrder.add(UnitType.Terran_Engineering_Bay);
+		
 		}
     }
     
@@ -165,7 +175,7 @@ public class Builder{
 				!alreadyBuilding(UnitType.Terran_Supply_Depot) && 
 				!buildOrder.contains(UnitType.Terran_Supply_Depot) && 
 				!areBeingBuilt.contains(UnitType.Terran_Supply_Depot))
-			buildOrder.addFirst(UnitType.Terran_Supply_Depot);
+			buildOrder.add(UnitType.Terran_Supply_Depot);
     }
     
     public void minerals() {
@@ -178,25 +188,61 @@ public class Builder{
          }
     }
     
+    public void extractorCheck() {
+    	if(gasExtractors.isEmpty() && !areBeingBuilt.contains(UnitType.Terran_Refinery) && !buildOrder.contains(UnitType.Terran_Refinery))
+    		buildOrder.add(UnitType.Terran_Refinery);
+    }
+    
     public void factories() {
     	if(me.minerals() > 300 && barrackCount < 3 && !buildOrder.contains(UnitType.Terran_Barracks) && !areBeingBuilt.contains(UnitType.Terran_Barracks)) {
 			buildOrder.add(UnitType.Terran_Barracks);
 		}
     }
     
+    public void mineGas() {
+    	List<Unit> candidateGasWorkers = new ArrayList<Unit>();
+    	int nrOfGasMiners = 0;
+    	for(Unit worker: workers) {
+    		if(worker.isGatheringGas())
+    			nrOfGasMiners++;
+    		else
+    			if(candidateGasWorkers.size() < 2 && worker.isGatheringMinerals()) {
+    				candidateGasWorkers.add(worker);
+    			}
+    	}
+    	for(int i = 0; i < 2 - nrOfGasMiners; i ++) {
+    		candidateGasWorkers.get(i).gather(gasExtractors.iterator().next());
+    	}
+    	 
+    	/*	Bad algo for getting workers off gas
+    	 		for(Unit worker:workers)
+    			if(worker.isGatheringGas() && nrOfGasMiners > 3) {
+    				worker.stop();
+    				nrOfGasMiners -= 1;
+    			}
+    	*/
+    }
+    
     public void evaluateGame() {
-    	System.out.println("BUILDER STARTS EVALUATING");
+    	//train another worker for minerals
     	minerals();
-    	evaluateWorkers();
+    	extractorCheck();
+    	//evaluate what buildings are being built at this point
+    	refreshAreBeingBuiltSet();
+    	evaluateTech();
     	upgrades();
     	factories();
     	bunker();
     	supply();
-    	this.buildFromStack();
+    	buildFromStack();
+    	
+    	//worker orders
     	sendIdleMine();
-    	System.out.println("BUILDER ENDS EVALUATING");
+    	mineGas();
+    	
+    	
     }
-    public void evaluateWorkers() {
+    public void refreshAreBeingBuiltSet() {
     	areBeingBuilt.clear();
     	for(Unit worker : workers)
     		if(worker.getBuildType() != null)
