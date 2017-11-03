@@ -1,5 +1,7 @@
+import java.io.FileNotFoundException;
 import java.util.ArrayDeque;
 import java.util.ArrayList;
+import java.util.HashMap;
 import java.util.HashSet;
 import java.util.LinkedList;
 import java.util.List;
@@ -8,12 +10,15 @@ import java.util.Queue;
 import java.util.Random;
 import java.util.Stack;
 
+import com.google.gson.JsonObject;
+
 import bwapi.*;
 import bwta.BWTA;
 import bwta.BaseLocation;
 
 public class ExampleBot extends DefaultBWListener {
 
+	
     private Mirror mirror = new Mirror();
 
     private Game game;
@@ -44,11 +49,20 @@ public class ExampleBot extends DefaultBWListener {
     	mirror.getModule().setEventListener(this);
         mirror.startGame();	
     }
-
-    public void trainMarines() {
+    
+    private int cheapCounter = 0;
+    //this is bad lul
+    public void trainArmy() {
     	for(Unit myUnit: self.getUnits()) {
-    		if(myUnit.getType() == UnitType.Terran_Barracks)
-    			myUnit.train(UnitType.Terran_Marine);
+    		if(myUnit.getType() == UnitType.Terran_Barracks) {
+    			cheapCounter ++;
+    			if(cheapCounter < 4)
+    				myUnit.train(UnitType.Terran_Marine);
+    			else
+    				myUnit.train(UnitType.Terran_Medic);
+    			if(cheapCounter >= 4)
+    				cheapCounter = 0;
+    		}
     	}
     }
     
@@ -95,7 +109,7 @@ public class ExampleBot extends DefaultBWListener {
         }
         if(unit.getType() == UnitType.Terran_Barracks)
         	builder.barrackCount ++;
-        if(unit.getType() == UnitType.Terran_Marine)
+        if(unit.getType() == UnitType.Terran_Marine || unit.getType() == UnitType.Terran_Medic)
         	commander.squad.add(unit);
         if(unit.getType() == UnitType.Terran_Refinery)
         	builder.gasExtractors.add(unit);
@@ -124,11 +138,9 @@ public class ExampleBot extends DefaultBWListener {
 
     @Override
     public void onStart() {
-    	
         game = mirror.getGame();
         game.setLocalSpeed(0);
         self = game.self();
-        
         //Use BWTA to analyze map
         //This may take a few minutes if the map is processed first time!
         System.out.println("Analyzing map...");
@@ -172,7 +184,7 @@ public class ExampleBot extends DefaultBWListener {
         	game.drawCircleMap(scout.getPosition(), 3, Color.Green);
        
         if(builder.barrackCount > 0)
-        	trainMarines();
+        	trainArmy();
         
         if(!bScouted)
         	this.scout();

@@ -1,4 +1,6 @@
+import java.io.FileNotFoundException;
 import java.util.ArrayList;
+import java.util.HashMap;
 import java.util.HashSet;
 import java.util.List;
 
@@ -15,11 +17,42 @@ public class Commander {
 	private static Game game;
 	private static Player me;
 	public HashSet<Unit> squad = new HashSet<Unit>();
+	public HashMap<UnitType, Integer> idealSquad = new HashMap<>();
 	public HashSet<Position> enemyBuildingMemory = new HashSet<Position>();
 	public TilePosition myTarget;
 	public Commander(Game theGame, Player me) {
 		this.game = theGame;
 		this.me = me;
+		init();
+	}
+	
+	public void init() {
+		
+		try {
+			idealSquad = JsonParser.LoadSquad("marineMedic.json");
+			System.out.println("Ideal squad: " + idealSquad);
+		} catch (FileNotFoundException e) {
+			// TODO Auto-generated catch block
+			e.printStackTrace();
+		}
+	}
+	
+	public boolean validateSquad(HashSet<Unit> squad, HashMap<UnitType, Integer> idealSquad ) {
+		HashMap<UnitType, Integer> squadMap = new HashMap<>();
+		for(Unit unit: squad) {
+			if( squadMap.get(unit.getType()) != null) {
+				int unitsOfType = idealSquad.get(unit.getType());
+				squadMap.put(unit.getType(), unitsOfType + 1);
+			}
+		}
+		//iterate through ideal squad, if we have at least the specified units we can attack
+		for(UnitType type: idealSquad.keySet())
+			if(squadMap.get(type) < idealSquad.get(type)) {
+				System.out.println("INVALID SQUAD");
+				return false;
+			}
+		System.out.println("GOOD FUCKING SQUAD");
+		return true;
 	}
 	
 	public void getInBunker(Unit bunker, Unit unit) {
@@ -93,7 +126,7 @@ public class Commander {
 	
 	public void defendBase() {
 		for(Unit myUnit:squad) {
-			myUnit.move(me.getStartLocation().toPosition()	);
+			myUnit.move(me.getStartLocation().toPosition());
 		}
 	}
 	
@@ -111,7 +144,7 @@ public class Commander {
 	
 	public void evaluateGame() {
 		myTarget = establishTarget();
-		if(squad.size() >= 30)
+		if(validateSquad(squad, idealSquad))
 			sendMarines(squad, myTarget);
 	}
 }

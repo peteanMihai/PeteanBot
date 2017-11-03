@@ -13,7 +13,6 @@ import bwapi.UpgradeType;
 public class Builder{
 	private static Game game;
 	private static Player me;
-	
 	//bad bad code
 	public HashSet<Unit> gasExtractors = new HashSet<Unit>();
     public ArrayDeque<UnitType> buildOrder = new ArrayDeque<UnitType>();
@@ -160,7 +159,21 @@ public class Builder{
 				buildOrder.add(UnitType.Terran_Engineering_Bay);
 		
 		}
+    	boolean bHaveAcademy = false;
+		for(Unit myUnit: me.getUnits()) {
+			if(myUnit.getType() == UnitType.Terran_Academy)
+				bHaveAcademy = true;
+		}
+		if(!bHaveAcademy && 
+			!buildOrder.contains(UnitType.Terran_Academy) && 
+			!areBeingBuilt.contains(UnitType.Terran_Academy) &&
+			!alreadyBuilding(UnitType.Terran_Academy)) {
+				buildOrder.add(UnitType.Terran_Academy);
+		
+		}
     }
+    
+    public boolean startTechBuilding() { return false;}
     
     public boolean alreadyBuilding(UnitType someBuilding) {
     	for(Unit myUnit: this.workers) 
@@ -238,8 +251,7 @@ public class Builder{
     	
     	//worker orders
     	sendIdleMine();
-    	mineGas();
-    	
+    	//mineGas();	
     	
     }
     public void refreshAreBeingBuiltSet() {
