@@ -27,10 +27,10 @@ public class ExampleBot extends DefaultBWListener {
     
     
     //battle logistics as of now
-    private Commander commander;
+    private static Commander commander;
     
     //building stack & other stuff
-    private Builder builder;
+    private static Builder builder;
     
     //bad global checks
     private boolean bOneExtractor = false;

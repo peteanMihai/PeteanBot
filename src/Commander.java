@@ -27,30 +27,46 @@ public class Commander {
 	}
 	
 	public void init() {
-		
 		try {
 			idealSquad = JsonParser.LoadSquad("marineMedic.json");
-			System.out.println("Ideal squad: " + idealSquad);
 		} catch (FileNotFoundException e) {
 			// TODO Auto-generated catch block
 			e.printStackTrace();
 		}
+		//idealSquad.put(UnitType.Terran_Marine, 20);
+		//idealSquad.put(UnitType.Terran_Medic, 5);
+		
 	}
 	
 	public boolean validateSquad(HashSet<Unit> squad, HashMap<UnitType, Integer> idealSquad ) {
+		System.out.println("VALIDATING SQUAD");
 		HashMap<UnitType, Integer> squadMap = new HashMap<>();
 		for(Unit unit: squad) {
+			System.out.println("PARSE SQUAD");
 			if( squadMap.get(unit.getType()) != null) {
-				int unitsOfType = idealSquad.get(unit.getType());
+				int unitsOfType = squadMap.get(unit.getType());
 				squadMap.put(unit.getType(), unitsOfType + 1);
 			}
+			else
+				squadMap.put(unit.getType(), 0);
 		}
+		System.out.println("idealSquad: " + idealSquad);
+		System.out.println("squad:" + squadMap);
 		//iterate through ideal squad, if we have at least the specified units we can attack
-		for(UnitType type: idealSquad.keySet())
+		
+
+			for(UnitType type: idealSquad.keySet()) {
+	
+			System.out.println("PARSING IDEAL SQUAD");
+			if(squadMap.get(type) == null) {
+				System.out.println("INVALID SQUAD");
+				return false;
+			}
 			if(squadMap.get(type) < idealSquad.get(type)) {
 				System.out.println("INVALID SQUAD");
 				return false;
 			}
+		}
 		System.out.println("GOOD FUCKING SQUAD");
 		return true;
 	}
