@@ -32,10 +32,6 @@ public class ExampleBot extends DefaultBWListener {
     //building stack & other stuff
     private static Builder builder;
     
-    //bad global checks
-    private boolean bOneExtractor = false;
-    
-    
     private boolean bScouted = false;
     
     //bad scouting strats
@@ -120,7 +116,7 @@ public class ExampleBot extends DefaultBWListener {
     @Override
     public void onUnitDestroy(Unit unit) {
     	if(unit.getPlayer().isEnemy(self))
-    		if(unit.getType().isBuilding())
+    		if(unit.getType().isBuilding() || unit.getType().isWorker() || !unit.getType().canMove())
     			commander.enemyBuildingMemory.remove(unit.getPosition());
     	
     	
@@ -147,6 +143,10 @@ public class ExampleBot extends DefaultBWListener {
         BWTA.readMap();
         BWTA.analyze();
         System.out.println("Map data ready");
+        
+        bScouted = false;
+        bunkers = new ArrayList<Unit>();
+        startingLocations = new Stack<TilePosition>();
         
         int i = 0;
 
@@ -193,8 +193,6 @@ public class ExampleBot extends DefaultBWListener {
        
         //System.out.println("evaluate game");
         //System.out.println("trainingbois");
-       
-        
        	}
 
 

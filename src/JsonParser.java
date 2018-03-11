@@ -16,10 +16,11 @@ import bwapi.UnitType;
 public class JsonParser{
 	private static Gson gson = new Gson();
 	
-	public JsonParser() {
+	public static void init() {
 		stringToUnitType.put("Terran_Marine", UnitType.Terran_Marine);
 		stringToUnitType.put("Terran_Medic", UnitType.Terran_Medic);
 	};
+
 	
 	//oh god
 	public static HashMap<String, UnitType> stringToUnitType = new HashMap<>();
@@ -45,17 +46,27 @@ public class JsonParser{
 			e.printStackTrace();
 		}
 			
-		HashMap<String, Integer> stringMapping = gson.fromJson(json, HashMap.class); 
-		System.out.println(stringMapping.keySet());
+		HashMap<String, Double> stringMapping = gson.fromJson(json, HashMap.class); 
+		System.out.println("stringMapping keySet: " + stringMapping.keySet());
+		for(String key: stringMapping.keySet())
+			System.out.println("value: " + stringMapping.get(key));
 		HashMap<UnitType, Integer> result = new HashMap<UnitType, Integer>();
 		for(String key: stringMapping.keySet()) {
 			//if this is a valid unit type
-			if(stringToUnitType.containsKey(key)) {
-				System.out.println("come on now");
-				result.put(stringToUnitType.get(key), stringMapping.get(key));
+			for(String otherKey: stringToUnitType.keySet()) {
+				System.out.println("value of stringToUnitType: " + stringToUnitType.get(otherKey));
+				if(otherKey.equals(key)) {
+					System.out.println("come on now");
+					try {
+					result.put(stringToUnitType.get(key), stringMapping.get(key).intValue());
+					}
+					catch(Exception e) {
+						System.out.println(e.getMessage());
+					}
+				}
 			}
 		}
-		System.out.println(result);	
+		System.out.println("result: " + result);	
 		return result;
 	}
 }

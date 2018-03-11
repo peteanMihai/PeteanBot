@@ -16,18 +16,22 @@ import bwapi.UpgradeType;
 public class Commander {
 	private static Game game;
 	private static Player me;
-	public HashSet<Unit> squad = new HashSet<Unit>();
-	public HashMap<UnitType, Integer> idealSquad = new HashMap<>();
-	public HashSet<Position> enemyBuildingMemory = new HashSet<Position>();
+	public HashSet<Unit> squad;
+	public HashMap<UnitType, Integer> idealSquad;
+	public HashSet<Position> enemyBuildingMemory;
 	public TilePosition myTarget;
 	public Commander(Game theGame, Player me) {
 		this.game = theGame;
 		this.me = me;
+		squad = new HashSet<Unit>();
+		idealSquad = new HashMap<>();
+		enemyBuildingMemory = new HashSet<Position>();
 		init();
 	}
 	
 	public void init() {
 		try {
+			JsonParser.init();
 			idealSquad = JsonParser.LoadSquad("marineMedic.json");
 		} catch (FileNotFoundException e) {
 			// TODO Auto-generated catch block
@@ -39,10 +43,18 @@ public class Commander {
 	}
 	
 	public boolean validateSquad(HashSet<Unit> squad, HashMap<UnitType, Integer> idealSquad ) {
-		System.out.println("VALIDATING SQUAD");
+		//System.out.println("VALIDATING SQUAD");
+		if(idealSquad.size() == 0) {	
+			//System.out.println("MISSING IDEAL SQUAD!");
+			return false;
+		}
 		HashMap<UnitType, Integer> squadMap = new HashMap<>();
 		for(Unit unit: squad) {
-			System.out.println("PARSE SQUAD");
+			if(!unit.exists()) {
+				squad.remove(unit);
+				continue;
+			}
+			//System.out.println("PARSE SQUAD");
 			if( squadMap.get(unit.getType()) != null) {
 				int unitsOfType = squadMap.get(unit.getType());
 				squadMap.put(unit.getType(), unitsOfType + 1);
@@ -50,24 +62,23 @@ public class Commander {
 			else
 				squadMap.put(unit.getType(), 0);
 		}
-		System.out.println("idealSquad: " + idealSquad);
-		System.out.println("squad:" + squadMap);
+		//System.out.println("idealSquad: " + idealSquad);
+		//System.out.println("squad:" + squadMap);
 		//iterate through ideal squad, if we have at least the specified units we can attack
 		
 
-			for(UnitType type: idealSquad.keySet()) {
-	
-			System.out.println("PARSING IDEAL SQUAD");
+		for(UnitType type: idealSquad.keySet()) {
+			//System.out.println("PARSING IDEAL SQUAD");
 			if(squadMap.get(type) == null) {
-				System.out.println("INVALID SQUAD");
+				//System.out.println("INVALID SQUAD");
 				return false;
 			}
 			if(squadMap.get(type) < idealSquad.get(type)) {
-				System.out.println("INVALID SQUAD");
+				//System.out.println("INVALID SQUAD");
 				return false;
 			}
 		}
-		System.out.println("GOOD FUCKING SQUAD");
+		//System.out.println("GOOD FUCKING SQUAD");
 		return true;
 	}
 	
@@ -95,7 +106,7 @@ public class Commander {
 				nrOfGoodies ++;
 		}
 		int squadSizeDiff = nrOfBaddies - nrOfGoodies;
-		if(squadSizeDiff <= 0) {
+		if(squadSizeDiff < 0) {
 			if(squadSizeDiff < -(nrOfGoodies))
 				threatLevel -= 2;
 			else
@@ -103,6 +114,7 @@ public class Commander {
 		}
 		else
 			threatLevel += 1;
+		game.drawTextMap(unit.getPosition().getX(), unit.getPosition().getY(), "" + threatLevel);
 		return threatLevel;
 	}
 	
@@ -162,5 +174,13 @@ public class Commander {
 		myTarget = establishTarget();
 		if(validateSquad(squad, idealSquad))
 			sendMarines(squad, myTarget);
+		for(Unit u: squad) {
+			try {
+				//evaluateThreat(u);
+			}
+			catch(Exception e) {
+				System.out.println(e.getMessage());
+			}
+		}
 	}
 }

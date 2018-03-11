@@ -14,15 +14,19 @@ public class Builder{
 	private static Game game;
 	private static Player me;
 	//bad bad code
-	public HashSet<Unit> gasExtractors = new HashSet<Unit>();
-    public ArrayDeque<UnitType> buildOrder = new ArrayDeque<UnitType>();
-    public HashSet<UnitType> areBeingBuilt = new HashSet<UnitType>();
+	public HashSet<Unit> gasExtractors;
+    public ArrayList<UnitType> buildOrder;
+    public HashSet<UnitType> areBeingBuilt;
 	//had to give access
-	public HashSet<Unit> workers = new HashSet<Unit>();
+	public HashSet<Unit> workers;
 	public int barrackCount = 0;
 	public Builder(Game game, Player me) {
 		this.game = game;
 		this.me = me;		
+		gasExtractors = new HashSet<Unit>();
+		buildOrder = new ArrayList<UnitType>();
+		areBeingBuilt = new HashSet<UnitType>();
+		workers = new HashSet<Unit>();
 		initBuildStack();
 	}
 	 // Returns a suitable TilePosition to build a given building type near
@@ -87,8 +91,8 @@ public class Builder{
     }
     
     public void initBuildStack() {
-    	buildOrder.addFirst(UnitType.Terran_Barracks);
-    	buildOrder.addFirst(UnitType.Terran_Refinery);
+    	buildOrder.add(UnitType.Terran_Barracks);
+    	buildOrder.add(UnitType.Terran_Refinery);
     }
     
     public void sendIdleMine() {
@@ -113,12 +117,21 @@ public class Builder{
     }
 
     public void buildFromStack() {
-	    while(buildOrder.size() > 0)
-	    	if(me.minerals() > buildOrder.peekLast().mineralPrice()) {
-	    		buildClose(buildOrder.removeLast(), me.getStartLocation());
+    	long duration = 0;
+    	
+	   for(UnitType building: buildOrder) {
+		    if(building == null)
+		    	continue;
+	    	if(me.minerals() > building.mineralPrice()) {
+	    		long start,stop;
+	    		start = System.currentTimeMillis();
+	    		buildClose(building, me.getStartLocation());
+	    		stop = System.currentTimeMillis();
+	    		duration += stop - start;
+	    		buildOrder.remove(building);
 	    	}
-	    	else
-	    		break;
+	   }
+	   game.drawTextScreen(10, 170, "findGoodTile: " + duration);
 	}
     
     public void upgrades() {
@@ -237,20 +250,62 @@ public class Builder{
     }
     
     public void evaluateGame() {
+    	//this cancer timing tho
+    	
     	//train another worker for minerals
+    	long startTime, stopTime, duration;
+    	startTime = System.nanoTime();
     	minerals();
+    	stopTime = System.nanoTime();
+    	game.drawTextScreen(10, 70, "builderMinerals: " + (stopTime - startTime) / 1000000);
+    	
+    	startTime = System.nanoTime();
     	extractorCheck();
+    	stopTime = System.nanoTime();
+    	game.drawTextScreen(10, 80, "builderExtractorCheckTimer: " + (stopTime - startTime) / 1000000);
+    	
+    	startTime = System.nanoTime();
     	//evaluate what buildings are being built at this point
     	refreshAreBeingBuiltSet();
-    	evaluateTech();
-    	upgrades();
-    	factories();
-    	bunker();
-    	supply();
-    	buildFromStack();
+    	stopTime = System.nanoTime();
+    	game.drawTextScreen(10, 90, "builderRefresh: " + (stopTime - startTime) / 1000000);
     	
+    	startTime = System.nanoTime();
+    	evaluateTech();
+    	stopTime = System.nanoTime();
+    	game.drawTextScreen(10, 100, "builderEvaluateTech: " + (stopTime - startTime) / 1000000);
+    	
+    	startTime = System.nanoTime();
+    	upgrades();
+    	stopTime = System.nanoTime();
+    	game.drawTextScreen(10, 110, "builderUpgrades: " + (stopTime - startTime) / 1000000);
+    	
+    	startTime = System.nanoTime();
+    	factories();
+    	stopTime = System.nanoTime();
+    	game.drawTextScreen(10, 120, "builderFactories: " + (stopTime - startTime) / 1000000);
+    	
+    	startTime = System.nanoTime();
+    	bunker();
+    	stopTime = System.nanoTime();
+    	game.drawTextScreen(10, 130, "builderBunker: " + (stopTime - startTime) / 1000000);
+    	
+    	startTime = System.nanoTime();
+    	supply();
+    	stopTime = System.nanoTime();
+    	game.drawTextScreen(10, 140, "builderSupply: " + (stopTime - startTime) / 1000000);
+    	
+    	startTime = System.nanoTime();
+    	buildFromStack();
+    	stopTime = System.nanoTime();
+    	game.drawTextScreen(10, 150, "builderBuildFromStack: " + (stopTime - startTime) / 1000000);
+    	
+    	startTime = System.nanoTime();
     	//worker orders
     	sendIdleMine();
+    	stopTime = System.nanoTime();
+    	game.drawTextScreen(10, 160, "builderSendIdleMine: " + (stopTime - startTime) / 1000000);
+    	
     	//mineGas();	
     	
     }
