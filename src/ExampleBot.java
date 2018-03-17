@@ -143,7 +143,7 @@ public class ExampleBot extends DefaultBWListener {
         BWTA.readMap();
         BWTA.analyze();
         System.out.println("Map data ready");
-        
+        cheapCounter = 0;
         bScouted = false;
         bunkers = new ArrayList<Unit>();
         startingLocations = new Stack<TilePosition>();
@@ -154,7 +154,6 @@ public class ExampleBot extends DefaultBWListener {
         commander = new Commander(game, self);
         //initialize builder
         builder = new Builder(game,self);
-        
         
         //initialize starting locations for scout
         for(TilePosition location: game.getStartLocations()) {
@@ -177,7 +176,7 @@ public class ExampleBot extends DefaultBWListener {
         game.drawTextScreen(10, 10, "Is supply blocked: " + (self.supplyUsed() >= self.supplyTotal()));
         game.drawTextScreen(10, 20, "Worker count: " + builder.workers.size());
         game.drawTextScreen(10, 30, "Squad size: " + commander.squad.size());
-        game.drawTextScreen(10, 40, "buildOrder: " + builder.buildOrder);
+        game.drawTextScreen(10, 40, "buildOrder (" + builder.buildOrder.size() + ")" + builder.buildOrder);
     	game.drawTextScreen(10, 50, "beingBuilt: " + builder.areBeingBuilt);
     	game.drawTextScreen(10, 60, "gas minners: " + gasMiners);    	
         if(scout != null)

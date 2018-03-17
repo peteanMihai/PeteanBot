@@ -19,13 +19,14 @@ public class JsonParser{
 	public static void init() {
 		stringToUnitType.put("Terran_Marine", UnitType.Terran_Marine);
 		stringToUnitType.put("Terran_Medic", UnitType.Terran_Medic);
+		//stringToUnitTyp
 	};
 
 	
 	//oh god
 	public static HashMap<String, UnitType> stringToUnitType = new HashMap<>();
 	
-	public static void SaveSquad(HashMap<UnitType, Integer> squad, String filename) throws FileNotFoundException{
+	public static void saveSquad(HashMap<UnitType, Integer> squad, String filename) throws FileNotFoundException{
 		PrintWriter writer = new PrintWriter(filename);
 		String jsonResult = gson.toJson(squad);
 		writer.write(jsonResult);
@@ -33,7 +34,25 @@ public class JsonParser{
 		writer.close();
 	}
 	
-	public static HashMap<UnitType, Integer> LoadSquad(String filename) throws FileNotFoundException{
+	public static HashMap<UnitType, Double> loadBuild(String fileName) throws FileNotFoundException{
+		BufferedReader reader = new BufferedReader(new FileReader(fileName));
+		String json = new String();
+		String jsonLine = new String();
+		HashMap<UnitType, Double> result = new HashMap<UnitType, Double>();
+		try {
+			while((jsonLine = reader.readLine()) != null) {
+				json += "\n" + jsonLine;
+			}
+		}
+		 catch (IOException e) {
+				// TODO Auto-generated catch block
+				e.printStackTrace();
+		}
+			
+		return result;
+	}
+	
+	public static HashMap<UnitType, Integer> loadSquad(String filename) throws FileNotFoundException{
 		BufferedReader reader = new BufferedReader(new FileReader(filename));
 		String json = new String();
 		String jsonLine = new String();

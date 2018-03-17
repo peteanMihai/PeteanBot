@@ -1,7 +1,9 @@
 import java.util.ArrayDeque;
 import java.util.ArrayList;
+import java.util.HashMap;
 import java.util.HashSet;
 import java.util.List;
+import java.util.Map;
 
 import bwapi.Game;
 import bwapi.Player;
@@ -13,6 +15,10 @@ import bwapi.UpgradeType;
 public class Builder{
 	private static Game game;
 	private static Player me;
+	
+	//internal resource representation because we might need to "lock resources" when building
+	int minerals;
+	int gas;
 	//bad bad code
 	public HashSet<Unit> gasExtractors;
     public ArrayList<UnitType> buildOrder;
@@ -85,14 +91,18 @@ public class Builder{
     			if(!myUnit.isIdle() && !myUnit.isGatheringMinerals())
     				continue;
     			TilePosition buildTile = this.getBuildTile(myUnit, building, place);
+    			if(buildTile.getX() == 0 && buildTile.getY() == 0)
+    				System.out.println("Could not determine build location for building: " + building);
     			myUnit.build(building, buildTile);
+    			System.out.println("Somebody is building a: " + building + " at " + place);
     			break;
     		}
     }
     
     public void initBuildStack() {
-    	buildOrder.add(UnitType.Terran_Barracks);
-    	buildOrder.add(UnitType.Terran_Refinery);
+    	addToBuildStack(UnitType.Terran_Barracks);
+    	addToBuildStack(UnitType.Terran_Refinery);
+    	addToBuildStack(UnitType.Terran_Science_Facility);
     }
     
     public void sendIdleMine() {
@@ -116,13 +126,63 @@ public class Builder{
     	}
     }
 
+    public List<UnitType> getPreReq(UnitType myUnit){
+    	ArrayList<UnitType> result = new ArrayList<>();
+    	Map<UnitType, Integer> req = myUnit.requiredUnits();
+    	result.addAll(req.keySet());
+    	return result;
+    }
+    
+    public boolean haveBuildingOfType(UnitType type) {
+    	for(Unit u: me.getUnits()) {
+    		if(u.getType() == type && u.isCompleted())
+    			return true;
+    	}
+    	return false;
+    }
+    
+    public boolean canBuild(UnitType type) {
+    	if(minerals < type.mineralPrice() || gas < type.gasPrice())
+    		return false;
+    	for(UnitType preReq: getPreReq(type)) {
+    		if(!haveBuildingOfType(preReq))
+    			return false;
+    	}
+    	return true;
+    	
+    }
+    
+    public void addToBuildStack(UnitType type) {
+    	buildOrder.add(type);
+    	List<UnitType> preReq = getPreReq(type);
+    	for(UnitType preReqType: preReq) {
+    		//if the prerequisite is not a building ignore for now
+    		if(!preReqType.isBuilding())
+    			continue;
+    		//todo treat this case because it gets called in first frame and adds a command center to the build order AND needs to treat the case where you're missing a base
+    		if(preReqType == UnitType.Terran_Command_Center)
+    			continue;
+    		//if the building is in our build order, ignore it
+    		if(buildOrder.contains(preReqType) || haveBuildingOfType(preReqType) || areBeingBuilt.contains(preReqType))
+    			continue;
+    		System.out.println("Add building: " + preReqType + " to build stack because of: " + type);		
+    		//add to build order because it's a prerequisite
+    		buildOrder.add(preReqType);
+    		//if the building isn't in our build order, check for its prerequisites
+    		addToBuildStack(preReqType);
+    	}
+    	
+    }
+    
     public void buildFromStack() {
     	long duration = 0;
-    	
-	   for(UnitType building: buildOrder) {
+		for(UnitType building: buildOrder) {
 		    if(building == null)
 		    	continue;
-	    	if(me.minerals() > building.mineralPrice()) {
+	    	if(canBuild(building)) {
+	    		//make sure we actually can build this
+	    		minerals -= building.mineralPrice();
+	    		gas -= building.gasPrice();
 	    		long start,stop;
 	    		start = System.currentTimeMillis();
 	    		buildClose(building, me.getStartLocation());
@@ -153,9 +213,9 @@ public class Builder{
     	if(buildOrder.contains(UnitType.Terran_Bunker) || game.elapsedTime() < 60 ||
     			areBeingBuilt.contains(UnitType.Terran_Bunker))
 			return;
-		buildOrder.add(UnitType.Terran_Bunker);
-		buildOrder.add(UnitType.Terran_Bunker);
-		buildOrder.add(UnitType.Terran_Bunker);
+		addToBuildStack(UnitType.Terran_Bunker);
+		addToBuildStack(UnitType.Terran_Bunker);
+		addToBuildStack(UnitType.Terran_Bunker);
     }
     
     public void evaluateTech() {
@@ -169,7 +229,7 @@ public class Builder{
 			!areBeingBuilt.contains(UnitType.Terran_Engineering_Bay) &&
 			!alreadyBuilding(UnitType.Terran_Engineering_Bay) &&
 			barrackCount > 1) {
-				buildOrder.add(UnitType.Terran_Engineering_Bay);
+				addToBuildStack(UnitType.Terran_Engineering_Bay);
 		
 		}
     	boolean bHaveAcademy = false;
@@ -181,7 +241,7 @@ public class Builder{
 			!buildOrder.contains(UnitType.Terran_Academy) && 
 			!areBeingBuilt.contains(UnitType.Terran_Academy) &&
 			!alreadyBuilding(UnitType.Terran_Academy)) {
-				buildOrder.add(UnitType.Terran_Academy);
+				addToBuildStack(UnitType.Terran_Academy);
 		
 		}
     }
@@ -190,9 +250,8 @@ public class Builder{
     
     public boolean alreadyBuilding(UnitType someBuilding) {
     	for(Unit myUnit: this.workers) 
-			if(myUnit.getType() == someBuilding)
-				if( myUnit.getBuildType() == someBuilding)
-					return true;
+			if( myUnit.getBuildType() == someBuilding)
+				return true;
 		return false;
     }
     
@@ -201,7 +260,7 @@ public class Builder{
 				!alreadyBuilding(UnitType.Terran_Supply_Depot) && 
 				!buildOrder.contains(UnitType.Terran_Supply_Depot) && 
 				!areBeingBuilt.contains(UnitType.Terran_Supply_Depot))
-			buildOrder.add(UnitType.Terran_Supply_Depot);
+			addToBuildStack(UnitType.Terran_Supply_Depot);
     }
     
     public void minerals() {
@@ -216,12 +275,12 @@ public class Builder{
     
     public void extractorCheck() {
     	if(gasExtractors.isEmpty() && !areBeingBuilt.contains(UnitType.Terran_Refinery) && !buildOrder.contains(UnitType.Terran_Refinery))
-    		buildOrder.add(UnitType.Terran_Refinery);
+    		addToBuildStack(UnitType.Terran_Refinery);
     }
     
     public void factories() {
     	if(me.minerals() > 300 && barrackCount < 3 && !buildOrder.contains(UnitType.Terran_Barracks) && !areBeingBuilt.contains(UnitType.Terran_Barracks)) {
-			buildOrder.add(UnitType.Terran_Barracks);
+			addToBuildStack(UnitType.Terran_Barracks);
 		}
     }
     
@@ -249,9 +308,19 @@ public class Builder{
     	*/
     }
     
+    public void lockResources() {
+    	for(UnitType u: areBeingBuilt) {
+    		minerals -= u.mineralPrice();
+    		gas -= u.gasPrice();
+    	}
+    	game.drawTextScreen(10, 170, "remaining resources: " + minerals + " " + gas);
+    }
+    
     public void evaluateGame() {
     	//this cancer timing tho
-    	
+    	minerals = me.minerals();
+    	gas = me.gas();
+    	lockResources();
     	//train another worker for minerals
     	long startTime, stopTime, duration;
     	startTime = System.nanoTime();
@@ -260,7 +329,7 @@ public class Builder{
     	game.drawTextScreen(10, 70, "builderMinerals: " + (stopTime - startTime) / 1000000);
     	
     	startTime = System.nanoTime();
-    	extractorCheck();
+    	//extractorCheck();
     	stopTime = System.nanoTime();
     	game.drawTextScreen(10, 80, "builderExtractorCheckTimer: " + (stopTime - startTime) / 1000000);
     	
@@ -281,12 +350,12 @@ public class Builder{
     	game.drawTextScreen(10, 110, "builderUpgrades: " + (stopTime - startTime) / 1000000);
     	
     	startTime = System.nanoTime();
-    	factories();
+        factories();
     	stopTime = System.nanoTime();
     	game.drawTextScreen(10, 120, "builderFactories: " + (stopTime - startTime) / 1000000);
     	
     	startTime = System.nanoTime();
-    	bunker();
+    	//bunker();
     	stopTime = System.nanoTime();
     	game.drawTextScreen(10, 130, "builderBunker: " + (stopTime - startTime) / 1000000);
     	

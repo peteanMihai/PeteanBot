@@ -32,7 +32,7 @@ public class Commander {
 	public void init() {
 		try {
 			JsonParser.init();
-			idealSquad = JsonParser.LoadSquad("marineMedic.json");
+			idealSquad = JsonParser.loadSquad("marineMedic.json");
 		} catch (FileNotFoundException e) {
 			// TODO Auto-generated catch block
 			e.printStackTrace();
