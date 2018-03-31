@@ -68,6 +68,7 @@ public class ExampleBot extends DefaultBWListener {
     			scout = myUnit;
     			scout.stop();
     			builder.workers.remove(scout);
+    			System.out.println(myUnit.getID() + " started scouting!");
     		}
     	if(commander.enemyBuildingMemory.size() > 0) {
     		scout.move(self.getStartLocation().toPosition());
@@ -154,7 +155,8 @@ public class ExampleBot extends DefaultBWListener {
         commander = new Commander(game, self);
         //initialize builder
         builder = new Builder(game,self);
-        
+        Builder.gas = 0;
+        Builder.minerals = 0;
         //initialize starting locations for scout
         for(TilePosition location: game.getStartLocations()) {
     		if(location != self.getStartLocation())

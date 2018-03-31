@@ -6,6 +6,7 @@ import java.util.List;
 import java.util.Map;
 
 import bwapi.Game;
+import bwapi.Pair;
 import bwapi.Player;
 import bwapi.TilePosition;
 import bwapi.Unit;
@@ -17,14 +18,16 @@ public class Builder{
 	private static Player me;
 	
 	//internal resource representation because we might need to "lock resources" when building
-	int minerals;
-	int gas;
+	static int minerals = 0;
+	static int gas = 0;
 	//bad bad code
 	public HashSet<Unit> gasExtractors;
     public ArrayList<UnitType> buildOrder;
     public HashSet<UnitType> areBeingBuilt;
 	//had to give access
 	public HashSet<Unit> workers;
+	public HashSet<Unit> busyWorkers;
+	public ArrayList<TilePosition> occupiedLocations;
 	public int barrackCount = 0;
 	public Builder(Game game, Player me) {
 		this.game = game;
@@ -33,6 +36,8 @@ public class Builder{
 		buildOrder = new ArrayList<UnitType>();
 		areBeingBuilt = new HashSet<UnitType>();
 		workers = new HashSet<Unit>();
+		busyWorkers = new HashSet<Unit>();
+		occupiedLocations = new ArrayList<TilePosition>();
 		initBuildStack();
 	}
 	 // Returns a suitable TilePosition to build a given building type near
@@ -48,7 +53,10 @@ public class Builder{
 	 			if ((n.getType() == UnitType.Resource_Vespene_Geyser) &&
 	 					( Math.abs(n.getTilePosition().getX() - aroundTile.getX()) < stopDist ) &&
 	 					( Math.abs(n.getTilePosition().getY() - aroundTile.getY()) < stopDist )
-	 					) return n.getTilePosition();
+	 					) {
+	 				occupiedLocations.add(n.getTilePosition());
+	 				return n.getTilePosition();
+	 			}
 	 		}
 	 	}
 
@@ -56,6 +64,15 @@ public class Builder{
 	 		for (int i=aroundTile.getX()-maxDist; i<=aroundTile.getX()+maxDist; i++) {
 	 			for (int j=aroundTile.getY()-maxDist; j<=aroundTile.getY()+maxDist; j++) {
 	 				if (game.canBuildHere(new TilePosition(i,j), buildingType, builder, false)) {
+	 					boolean plannedByOther = false;
+	 					for(TilePosition tile: occupiedLocations) {
+	 	    				if(Math.abs(tile.getX() - i) == 0)
+	 	    					plannedByOther = true;
+	 	    				if(Math.abs(tile.getY() - j) == 0)
+	 	    					plannedByOther = true;
+	 	    			}
+	 					if(plannedByOther)
+	 						continue;
 	 					// units that are blocking the tile
 	 					boolean unitsInWay = false;
 	 					for (Unit u : game.getAllUnits()) {
@@ -63,6 +80,7 @@ public class Builder{
 	 						if ((Math.abs(u.getTilePosition().getX()-i) < 4) && (Math.abs(u.getTilePosition().getY()-j) < 4)) unitsInWay = true;
 	 					}
 	 					if (!unitsInWay) {
+	 						occupiedLocations.add(new TilePosition(i, j));
 	 						return new TilePosition(i, j);
 	 					}
 	 					// creep for Zerg
@@ -85,18 +103,27 @@ public class Builder{
 	 	if (ret == null) game.printf("Unable to find suitable build position for " + buildingType.toString());
 	 	return ret;
 	 }
-	 
-    public void buildClose(UnitType building, TilePosition place) {
+    public boolean buildClose(UnitType building, TilePosition place) {
+    	boolean startedBuilding = false;
     	for (Unit myUnit : workers) {    		
-    			if(!myUnit.isIdle() && !myUnit.isGatheringMinerals())
+    			if(myUnit.getBuildType() != UnitType.None)
+    				continue;
+    			if(myUnit.isConstructing() || busyWorkers.contains(myUnit))
     				continue;
     			TilePosition buildTile = this.getBuildTile(myUnit, building, place);
-    			if(buildTile.getX() == 0 && buildTile.getY() == 0)
+    			if(buildTile == null) {
     				System.out.println("Could not determine build location for building: " + building);
+    				continue;
+    			}
+    			busyWorkers.add(myUnit);
+    			
     			myUnit.build(building, buildTile);
-    			System.out.println("Somebody is building a: " + building + " at " + place);
+    			//todo deal with what happens if a building is destroyed (it's going to remain an occupied location
+    			System.out.println(myUnit.getID() + " is building a: " + building + "(" +  myUnit.getBuildType() + ") at " + buildTile + "minerals: " + me.minerals() + "(locked: " + minerals +  ") stack:" + buildOrder);// + " stack: " + areBeingBuilt + " occLoc: " + occupiedLocations);
+    			startedBuilding = true;
     			break;
     		}
+    	return startedBuilding;
     }
     
     public void initBuildStack() {
@@ -107,8 +134,8 @@ public class Builder{
     
     public void sendIdleMine() {
         //if it's a worker and it's idle, send it to the closest mineral patch
-    	for(Unit myUnit : workers) { 
-    		if (myUnit.isIdle()) {
+    	for(Unit myUnit : me.getUnits()) { 
+    		if (myUnit.isIdle() && myUnit.getType() == UnitType.Terran_SCV && !busyWorkers.contains(myUnit)) {
     			Unit closestMineral = null;
     			//find the closest mineral
     			for (Unit neutralUnit : game.neutral().getUnits()) 
@@ -119,10 +146,12 @@ public class Builder{
     			        		//System.out.println("go mine ya fucker");
     						}
     					
-        //if a mineral patch was found, send the worker to gather it
-        if (closestMineral != null)
-            myUnit.gather(closestMineral, false);
-    		}
+		        //if a mineral patch was found, send the worker to gather it
+		        if (closestMineral != null)
+		            myUnit.gather(closestMineral, false);
+		        workers.add(myUnit);
+		    	}
+    		
     	}
     }
 
@@ -145,15 +174,14 @@ public class Builder{
     	if(minerals < type.mineralPrice() || gas < type.gasPrice())
     		return false;
     	for(UnitType preReq: getPreReq(type)) {
-    		if(!haveBuildingOfType(preReq))
+    		if(!haveBuildingOfType(preReq) && preReq != UnitType.None)
     			return false;
     	}
     	return true;
     	
     }
     
-    public void addToBuildStack(UnitType type) {
-    	buildOrder.add(type);
+    public void addPreReq(UnitType type) {
     	List<UnitType> preReq = getPreReq(type);
     	for(UnitType preReqType: preReq) {
     		//if the prerequisite is not a building ignore for now
@@ -166,32 +194,38 @@ public class Builder{
     		if(buildOrder.contains(preReqType) || haveBuildingOfType(preReqType) || areBeingBuilt.contains(preReqType))
     			continue;
     		System.out.println("Add building: " + preReqType + " to build stack because of: " + type);		
-    		//add to build order because it's a prerequisite
-    		buildOrder.add(preReqType);
     		//if the building isn't in our build order, check for its prerequisites
     		addToBuildStack(preReqType);
     	}
-    	
+    }
+    
+    public void addToBuildStack(UnitType type) {
+    	if(type == UnitType.None)
+    		return;
+    	buildOrder.add(type);
+    	addPreReq(type);
     }
     
     public void buildFromStack() {
-    	long duration = 0;
 		for(UnitType building: buildOrder) {
-		    if(building == null)
-		    	continue;
+		    if(building == UnitType.None) {
+		    	buildOrder.remove(building);
+		    	break;
+		    }
+		    //if we have enough resources to build this and whatever we want to build at this time
 	    	if(canBuild(building)) {
+	    		//if we couldn't start building
+	    		if(!buildClose(building, me.getStartLocation()))
+	    			continue;
+	    		addPreReq(building);
 	    		//make sure we actually can build this
 	    		minerals -= building.mineralPrice();
 	    		gas -= building.gasPrice();
-	    		long start,stop;
-	    		start = System.currentTimeMillis();
-	    		buildClose(building, me.getStartLocation());
-	    		stop = System.currentTimeMillis();
-	    		duration += stop - start;
 	    		buildOrder.remove(building);
+	    		//might need to only do one per frame because of silly bug
+	    		break;
 	    	}
 	   }
-	   game.drawTextScreen(10, 170, "findGoodTile: " + duration);
 	}
     
     public void upgrades() {
@@ -267,8 +301,9 @@ public class Builder{
     	 //iterate through my units
         for (Unit myUnit : me.getUnits()) {
             //if there's enough minerals, train an SCV
-            if (myUnit.getType() == UnitType.Terran_Command_Center && me.minerals() >= 50 && workers.size() < 15) {
+            if (myUnit.getType() == UnitType.Terran_Command_Center && me.minerals() >= 50 && workers.size() < 15 && minerals > 50) {
                 myUnit.train(UnitType.Terran_SCV);
+                minerals -= 50;
             }
          }
     }
@@ -340,17 +375,17 @@ public class Builder{
     	game.drawTextScreen(10, 90, "builderRefresh: " + (stopTime - startTime) / 1000000);
     	
     	startTime = System.nanoTime();
-    	evaluateTech();
+    	//evaluateTech();
     	stopTime = System.nanoTime();
     	game.drawTextScreen(10, 100, "builderEvaluateTech: " + (stopTime - startTime) / 1000000);
     	
     	startTime = System.nanoTime();
-    	upgrades();
+    	//upgrades();
     	stopTime = System.nanoTime();
     	game.drawTextScreen(10, 110, "builderUpgrades: " + (stopTime - startTime) / 1000000);
     	
     	startTime = System.nanoTime();
-        factories();
+        //factories();
     	stopTime = System.nanoTime();
     	game.drawTextScreen(10, 120, "builderFactories: " + (stopTime - startTime) / 1000000);
     	
@@ -376,12 +411,17 @@ public class Builder{
     	game.drawTextScreen(10, 160, "builderSendIdleMine: " + (stopTime - startTime) / 1000000);
     	
     	//mineGas();	
+    	for(Unit t: busyWorkers)
+    		if(t.isIdle()) {
+    			busyWorkers.remove(t);
+    			System.out.println(t.getID() + " is no longer busy!");
+    		}
     	
     }
     public void refreshAreBeingBuiltSet() {
     	areBeingBuilt.clear();
-    	for(Unit worker : workers)
-    		if(worker.getBuildType() != null)
+    	for(Unit worker : me.getUnits())
+    		if(worker.getBuildType() != null && worker.getType() == UnitType.Terran_SCV)
     			areBeingBuilt.add(worker.getBuildType());
     }
 }
