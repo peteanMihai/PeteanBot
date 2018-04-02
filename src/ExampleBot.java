@@ -149,12 +149,13 @@ public class ExampleBot extends DefaultBWListener {
         bunkers = new ArrayList<Unit>();
         startingLocations = new Stack<TilePosition>();
         
-        int i = 0;
 
         //initialize commander
         commander = new Commander(game, self);
         //initialize builder
         builder = new Builder(game,self);
+        builder.setCommander(commander);
+        commander.setBuilder(builder);
         Builder.gas = 0;
         Builder.minerals = 0;
         //initialize starting locations for scout
@@ -172,6 +173,7 @@ public class ExampleBot extends DefaultBWListener {
     	//debug business
     	int gasMiners = 0;
     	for(Unit u: builder.workers) {
+    		game.drawTextScreen(u.getPosition().getX(), u.getPosition().getY(),"" + u.getID());
     		if(u.isGatheringGas())
     			gasMiners++;
     	}

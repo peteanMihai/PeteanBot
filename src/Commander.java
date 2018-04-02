@@ -16,6 +16,7 @@ import bwapi.UpgradeType;
 public class Commander {
 	private static Game game;
 	private static Player me;
+	public Builder builder;
 	public HashSet<Unit> squad;
 	public HashMap<UnitType, Integer> idealSquad;
 	public HashSet<Position> enemyBuildingMemory;
@@ -27,6 +28,14 @@ public class Commander {
 		idealSquad = new HashMap<>();
 		enemyBuildingMemory = new HashSet<Position>();
 		init();
+	}
+	
+	public void setBuilder(Builder bld) {
+		builder = bld;
+	}
+	
+	public Builder getBuilder() {
+		return builder;
 	}
 	
 	public void init() {

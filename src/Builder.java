@@ -8,6 +8,7 @@ import java.util.Map;
 import bwapi.Game;
 import bwapi.Pair;
 import bwapi.Player;
+import bwapi.TechType;
 import bwapi.TilePosition;
 import bwapi.Unit;
 import bwapi.UnitType;
@@ -21,6 +22,8 @@ public class Builder{
 	static int minerals = 0;
 	static int gas = 0;
 	//bad bad code
+	public Commander commander;
+	public ArrayList<UnitType> ownedBuildingTypes;
 	public HashSet<Unit> gasExtractors;
     public ArrayList<UnitType> buildOrder;
     public HashSet<UnitType> areBeingBuilt;
@@ -40,6 +43,13 @@ public class Builder{
 		occupiedLocations = new ArrayList<TilePosition>();
 		initBuildStack();
 	}
+	public void setCommander(Commander comm) {
+		commander = comm;
+	}
+	public Commander getCommander() {
+		return commander;
+	}
+	
 	 // Returns a suitable TilePosition to build a given building type near
 	 // specified TilePosition aroundTile, or null if not found. (builder parameter is our worker)
 	public TilePosition  getBuildTile(Unit builder, UnitType buildingType, TilePosition aroundTile) {
@@ -127,11 +137,23 @@ public class Builder{
     }
     
     public void initBuildStack() {
-    	addToBuildStack(UnitType.Terran_Barracks);
     	addToBuildStack(UnitType.Terran_Refinery);
-    	addToBuildStack(UnitType.Terran_Science_Facility);
     }
-    
+     
+    public void updateStackForIdealSquad() {
+    	for(UnitType unit: commander.idealSquad.keySet()) {
+    		for(UnitType req: unit.requiredUnits().keySet()) {
+    			//System.out.println(req + " is needed for " + unit);
+    			if(ownedBuildingTypes.contains(req))
+        			continue;
+    			addToBuildStack(req);
+    		}
+    		TechType reqTech = unit.requiredTech();
+    		//System.out.println(reqTech + " is needed for " + unit);
+    		if(reqTech != TechType.None && !ownedBuildingTypes.contains(reqTech))
+    			addToBuildStack(reqTech.requiredUnit());
+    	}
+    }
     public void sendIdleMine() {
         //if it's a worker and it's idle, send it to the closest mineral patch
     	for(Unit myUnit : me.getUnits()) { 
@@ -200,7 +222,7 @@ public class Builder{
     }
     
     public void addToBuildStack(UnitType type) {
-    	if(type == UnitType.None)
+    	if(type == UnitType.None || buildOrder.contains(type))
     		return;
     	buildOrder.add(type);
     	addPreReq(type);
@@ -355,6 +377,8 @@ public class Builder{
     	//this cancer timing tho
     	minerals = me.minerals();
     	gas = me.gas();
+    	updateOwnedBuildingTypes();
+    	updateStackForIdealSquad();
     	lockResources();
     	//train another worker for minerals
     	long startTime, stopTime, duration;
@@ -423,5 +447,13 @@ public class Builder{
     	for(Unit worker : me.getUnits())
     		if(worker.getBuildType() != null && worker.getType() == UnitType.Terran_SCV)
     			areBeingBuilt.add(worker.getBuildType());
+    }
+    
+    public void updateOwnedBuildingTypes(){
+    	ArrayList<UnitType> res = new ArrayList<UnitType>();
+    	for(Unit u: me.getUnits())
+    		if(!res.contains(u.getType()))
+    			res.add(u.getType());
+    	ownedBuildingTypes =  res;
     }
 }
