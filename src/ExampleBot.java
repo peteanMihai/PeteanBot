@@ -46,21 +46,8 @@ public class ExampleBot extends DefaultBWListener {
         mirror.startGame();	
     }
     
-    private int cheapCounter = 0;
-    //this is bad lul
-    public void trainArmy() {
-    	for(Unit myUnit: self.getUnits()) {
-    		if(myUnit.getType() == UnitType.Terran_Barracks) {
-    			cheapCounter ++;
-    			if(cheapCounter < 4)
-    				myUnit.train(UnitType.Terran_Marine);
-    			else
-    				myUnit.train(UnitType.Terran_Medic);
-    			if(cheapCounter >= 4)
-    				cheapCounter = 0;
-    		}
-    	}
-    }
+
+   
     
     public void scout() {
     	for(Unit myUnit: self.getUnits()) 
@@ -95,7 +82,8 @@ public class ExampleBot extends DefaultBWListener {
     
     @Override
     public void onUnitCreate(Unit unit) {
-    
+    	if(unit.getType() == UnitType.Terran_Refinery)
+    		builder.gasExtractors.add(unit);
     }
     
     @Override
@@ -106,8 +94,7 @@ public class ExampleBot extends DefaultBWListener {
         }
         if(unit.getType() == UnitType.Terran_Barracks)
         	builder.barrackCount ++;
-        if(unit.getType() == UnitType.Terran_Marine || unit.getType() == UnitType.Terran_Medic)
-        	commander.squad.add(unit);
+
         if(unit.getType() == UnitType.Terran_Refinery)
         	builder.gasExtractors.add(unit);
         if(unit.getType() == UnitType.Terran_Bunker)
@@ -126,9 +113,6 @@ public class ExampleBot extends DefaultBWListener {
         }
     	if(unit.getType() == UnitType.Terran_Barracks)
     		builder.barrackCount --;
-    	 if(unit.getType() == UnitType.Terran_Marine) {
-         	commander.squad.remove(unit);
-    	 }
     	 if(unit.getType() == UnitType.Terran_Refinery)
          	builder.gasExtractors.remove(unit);
     }
@@ -144,7 +128,6 @@ public class ExampleBot extends DefaultBWListener {
         BWTA.readMap();
         BWTA.analyze();
         System.out.println("Map data ready");
-        cheapCounter = 0;
         bScouted = false;
         bunkers = new ArrayList<Unit>();
         startingLocations = new Stack<TilePosition>();
@@ -173,7 +156,7 @@ public class ExampleBot extends DefaultBWListener {
     	//debug business
     	int gasMiners = 0;
     	for(Unit u: builder.workers) {
-    		game.drawTextScreen(u.getPosition().getX(), u.getPosition().getY(),"" + u.getID());
+    		game.drawTextMap(u.getPosition(),"" + u.getID());
     		if(u.isGatheringGas())
     			gasMiners++;
     	}
@@ -186,8 +169,6 @@ public class ExampleBot extends DefaultBWListener {
         if(scout != null)
         	game.drawCircleMap(scout.getPosition(), 3, Color.Green);
        
-        if(builder.barrackCount > 0)
-        	trainArmy();
         
         if(!bScouted)
         	this.scout();

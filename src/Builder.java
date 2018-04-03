@@ -112,7 +112,32 @@ public class Builder{
 
 	 	if (ret == null) game.printf("Unable to find suitable build position for " + buildingType.toString());
 	 	return ret;
-	 }
+	}
+	
+	 public void trainUnit(UnitType type) {
+	    	for(Unit u: me.getUnits())
+	    		if(u.canTrain(type) && !u.isTraining() && minerals > type.mineralPrice() && gas > type.gasPrice()) {
+	    			u.train(type);
+	    			minerals -= type.mineralPrice();
+	    			gas -= type.gasPrice();
+	    		}
+	    }
+	    
+	    public void trainArmy() {
+	    	if(commander.idealSquad == null)
+	    		return;
+	    	HashMap<UnitType, Integer> necesarryUnits = (HashMap<UnitType, Integer>)commander.idealSquad.clone();
+	    	for(UnitType type: necesarryUnits.keySet())
+	    		for(Unit u : commander.squad)
+	    				if(type == u.getType()) {
+	    					int oldValue = necesarryUnits.get(type);
+	    					necesarryUnits.put(type, oldValue - 1);
+	    				}
+	    	for(UnitType type: necesarryUnits.keySet())
+	    		if(necesarryUnits.get(type) > 0)
+	    			trainUnit(type);	
+	    }
+	
     public boolean buildClose(UnitType building, TilePosition place) {
     	boolean startedBuilding = false;
     	for (Unit myUnit : workers) {    		
@@ -312,7 +337,7 @@ public class Builder{
     }
     
     public void supply() {
-		if(me.supplyTotal() <= me.supplyUsed() + 10 && 
+		if(me.supplyTotal() <= me.supplyUsed() + 5 && 
 				!alreadyBuilding(UnitType.Terran_Supply_Depot) && 
 				!buildOrder.contains(UnitType.Terran_Supply_Depot) && 
 				!areBeingBuilt.contains(UnitType.Terran_Supply_Depot))
@@ -433,6 +458,8 @@ public class Builder{
     	sendIdleMine();
     	stopTime = System.nanoTime();
     	game.drawTextScreen(10, 160, "builderSendIdleMine: " + (stopTime - startTime) / 1000000);
+    	
+    	trainArmy();
     	
     	//mineGas();	
     	for(Unit t: busyWorkers)

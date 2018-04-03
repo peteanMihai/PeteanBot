@@ -46,49 +46,36 @@ public class Commander {
 			// TODO Auto-generated catch block
 			e.printStackTrace();
 		}
+		
+		System.out.println("Ideal squad loaded: " + idealSquad);
 		//idealSquad.put(UnitType.Terran_Marine, 20);
 		//idealSquad.put(UnitType.Terran_Medic, 5);
 		
 	}
 	
-	public boolean validateSquad(HashSet<Unit> squad, HashMap<UnitType, Integer> idealSquad ) {
-		//System.out.println("VALIDATING SQUAD");
-		if(idealSquad.size() == 0) {	
-			//System.out.println("MISSING IDEAL SQUAD!");
-			return false;
-		}
-		HashMap<UnitType, Integer> squadMap = new HashMap<>();
-		for(Unit unit: squad) {
-			if(!unit.exists()) {
-				squad.remove(unit);
-				continue;
-			}
-			//System.out.println("PARSE SQUAD");
-			if( squadMap.get(unit.getType()) != null) {
-				int unitsOfType = squadMap.get(unit.getType());
-				squadMap.put(unit.getType(), unitsOfType + 1);
-			}
-			else
-				squadMap.put(unit.getType(), 0);
-		}
-		//System.out.println("idealSquad: " + idealSquad);
-		//System.out.println("squad:" + squadMap);
-		//iterate through ideal squad, if we have at least the specified units we can attack
+	public void refreshSquad() {
+		squad.clear();
+		for(Unit u: me.getUnits())
+			if((u.canAttack() && u.getType() != UnitType.Terran_SCV) || u.getType() == UnitType.Terran_Medic )
+				squad.add(u);
 		
-
-		for(UnitType type: idealSquad.keySet()) {
-			//System.out.println("PARSING IDEAL SQUAD");
-			if(squadMap.get(type) == null) {
-				//System.out.println("INVALID SQUAD");
-				return false;
-			}
-			if(squadMap.get(type) < idealSquad.get(type)) {
-				//System.out.println("INVALID SQUAD");
-				return false;
-			}
-		}
-		//System.out.println("GOOD FUCKING SQUAD");
-		return true;
+	}
+	
+	public boolean validateSquad(HashSet<Unit> squad, HashMap<UnitType, Integer> idealSquad ) {
+		if(idealSquad == null)
+			return false;
+		HashMap<UnitType, Integer> necesarryUnits = (HashMap<UnitType, Integer>) idealSquad.clone();
+    	for(UnitType type: necesarryUnits.keySet())
+    		for(Unit u : squad)
+    				if(type == u.getType()) {
+    					int oldValue = necesarryUnits.get(type);
+    					necesarryUnits.put(type, oldValue - 1);
+    				}
+    	
+    	for(UnitType type: necesarryUnits.keySet())
+    		if(necesarryUnits.get(type) > 0)
+    			return false;
+    	return true;
 	}
 	
 	public void getInBunker(Unit bunker, Unit unit) {
@@ -181,8 +168,12 @@ public class Commander {
 	
 	public void evaluateGame() {
 		myTarget = establishTarget();
-		if(validateSquad(squad, idealSquad))
+		refreshSquad();
+		if(validateSquad(squad, idealSquad) == true)
+		{
+			System.out.println("Squad of " + squad.size() + " is attacking!");
 			sendMarines(squad, myTarget);
+		}
 		for(Unit u: squad) {
 			try {
 				//evaluateThreat(u);

@@ -19,7 +19,7 @@ public class JsonParser{
 	public static void init() {
 		stringToUnitType.put("Terran_Marine", UnitType.Terran_Marine);
 		stringToUnitType.put("Terran_Medic", UnitType.Terran_Medic);
-		//stringToUnitTyp
+		stringToUnitType.put("Terran_Vulture", UnitType.Terran_Vulture);
 	};
 
 	
