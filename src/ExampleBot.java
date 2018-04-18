@@ -15,10 +15,10 @@ import com.google.gson.JsonObject;
 import bwapi.*;
 import bwta.BWTA;
 import bwta.BaseLocation;
-
+import java.util.logging.*;
 public class ExampleBot extends DefaultBWListener {
 
-	
+	public  Logger logger = Logger.getLogger(ExampleBot.class.getName());
     private Mirror mirror = new Mirror();
 
     private Game game;
@@ -55,7 +55,7 @@ public class ExampleBot extends DefaultBWListener {
     			scout = myUnit;
     			scout.stop();
     			builder.workers.remove(scout);
-    			System.out.println(myUnit.getID() + " started scouting!");
+    			logger.log(Level.INFO, myUnit.getID() + " started scouting!");
     		}
     	if(commander.enemyBuildingMemory.size() > 0) {
     		scout.move(self.getStartLocation().toPosition());
@@ -124,10 +124,10 @@ public class ExampleBot extends DefaultBWListener {
         self = game.self();
         //Use BWTA to analyze map
         //This may take a few minutes if the map is processed first time!
-        System.out.println("Analyzing map...");
+        logger.log(Level.INFO, "Analyzing map...");
         BWTA.readMap();
         BWTA.analyze();
-        System.out.println("Map data ready");
+        logger.log(Level.INFO, "Map data ready");
         bScouted = false;
         bunkers = new ArrayList<Unit>();
         startingLocations = new Stack<TilePosition>();
@@ -147,7 +147,7 @@ public class ExampleBot extends DefaultBWListener {
     			startingLocations.push(location);
     	}
        
-        System.out.println("initialization complete");
+        logger.log(Level.INFO, "initialization complete");
     }
 
     @Override
@@ -175,8 +175,8 @@ public class ExampleBot extends DefaultBWListener {
         
         this.evaluateGame();
        
-        //System.out.println("evaluate game");
-        //System.out.println("trainingbois");
+        //logger.log(Level.INFO, "evaluate game");
+        //logger.log(Level.INFO, "trainingbois");
        	}
 
 

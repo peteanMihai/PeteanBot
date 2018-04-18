@@ -12,8 +12,11 @@ import bwapi.TilePosition;
 import bwapi.Unit;
 import bwapi.UnitType;
 import bwapi.UpgradeType;
+import bwapi.WeaponType;
 
+import java.util.logging.*;
 public class Commander {
+	public  Logger logger = Logger.getLogger(ExampleBot.class.getName());
 	private static Game game;
 	private static Player me;
 	public Builder builder;
@@ -47,7 +50,7 @@ public class Commander {
 			e.printStackTrace();
 		}
 		
-		System.out.println("Ideal squad loaded: " + idealSquad);
+		logger.log(Level.INFO, "Ideal squad loaded: " + idealSquad);
 		//idealSquad.put(UnitType.Terran_Marine, 20);
 		//idealSquad.put(UnitType.Terran_Medic, 5);
 		
@@ -88,18 +91,32 @@ public class Commander {
 		int threatLevel = 0;
 		int nrOfBaddies = 0;
 		int nrOfGoodies = 0;
-		List<Unit> neighbours = unit.getUnitsInWeaponRange(unit.getType().groundWeapon());
+		
+		WeaponType wepType = unit.getType().groundWeapon();
+		//logger.log(Level.INFO, "got weapon type: " + wepType);
+		ArrayList<Unit> neighbours = new ArrayList<Unit>();
+		//logger.log(Level.INFO, "arraylist of neighbours initialized: ");
+		unit.getUnitsInRadius(wepType.maxRange());
+		//logger.log(Level.INFO, "got units in range: " + wepType);
+		if(neighbours.size() == 0) {
+			//logger.log(Level.INFO, "no neighbours!");
+			game.drawTextMap(unit.getPosition() , "" + threatLevel);
+			return 0;
+		}
+		//logger.log(Level.INFO, "obtained neighbours:" + neighbours.size());
 		for(Unit neighbour: neighbours) {
 			//neighbour is enemy
 			if(neighbour.canAttack(unit) && neighbour.getPlayer().isEnemy(unit.getPlayer())){
+				//logger.log(Level.INFO, "neighbour " + unit + " can attack " + unit);
 				if(neighbour.getType().groundWeapon().damageAmount() > unit.getHitPoints())
 					threatLevel += 3;
 				else
 					threatLevel += 1;
 				nrOfBaddies ++;
 			}
-			if(neighbour.getPlayer() == unit.getPlayer())
-				nrOfGoodies ++;
+			if(neighbour.getPlayer() == unit.getPlayer()){
+				nrOfGoodies ++;	
+			}
 		}
 		int squadSizeDiff = nrOfBaddies - nrOfGoodies;
 		if(squadSizeDiff < 0) {
@@ -110,7 +127,8 @@ public class Commander {
 		}
 		else
 			threatLevel += 1;
-		game.drawTextMap(unit.getPosition().getX(), unit.getPosition().getY(), "" + threatLevel);
+		//logger.log(Level.INFO, "trying to draw unit threat level");
+		game.drawTextMap(unit.getPosition() , "" + threatLevel);
 		return threatLevel;
 	}
 	
@@ -171,15 +189,17 @@ public class Commander {
 		refreshSquad();
 		if(validateSquad(squad, idealSquad) == true)
 		{
-			System.out.println("Squad of " + squad.size() + " is attacking!");
+			logger.log(Level.INFO, "Squad of " + squad.size() + " is attacking!");
 			sendMarines(squad, myTarget);
 		}
 		for(Unit u: squad) {
 			try {
-				//evaluateThreat(u);
+				logger.log(Level.INFO, "before evaluate");
+				evaluateThreat(u);
+				logger.log(Level.INFO, "after evaluate");
 			}
 			catch(Exception e) {
-				System.out.println(e.getMessage());
+				e.printStackTrace();
 			}
 		}
 	}

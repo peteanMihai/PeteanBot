@@ -13,8 +13,9 @@ import bwapi.TilePosition;
 import bwapi.Unit;
 import bwapi.UnitType;
 import bwapi.UpgradeType;
-
+import java.util.logging.*;
 public class Builder{
+    public  Logger logger = Logger.getLogger(ExampleBot.class.getName());
 	private static Game game;
 	private static Player me;
 	
@@ -57,6 +58,13 @@ public class Builder{
 	 	int maxDist = 3;
 	 	int stopDist = 40;
 
+	 	if(buildingType.isAddon())
+	 	{
+	 		for(Unit n: me.getUnits())
+	 			if(n.canBuildAddon(buildingType) && reserveResources(buildingType))
+	 				n.buildAddon(buildingType);
+	 		return TilePosition.Invalid;
+	 	}
 	 	// Refinery, Assimilator, Extractor
 	 	if (buildingType.isRefinery()) {
 	 		for (Unit n : game.neutral().getUnits()) {
@@ -146,15 +154,15 @@ public class Builder{
     			if(myUnit.isConstructing() || busyWorkers.contains(myUnit))
     				continue;
     			TilePosition buildTile = this.getBuildTile(myUnit, building, place);
-    			if(buildTile == null) {
-    				System.out.println("Could not determine build location for building: " + building);
-    				continue;
+    			if(buildTile == null || buildTile == TilePosition.Invalid) {
+    				logger.log(Level.INFO, "Could not determine build location for building: " + building);
+    				break;
     			}
     			busyWorkers.add(myUnit);
     			
     			myUnit.build(building, buildTile);
     			//todo deal with what happens if a building is destroyed (it's going to remain an occupied location
-    			System.out.println(myUnit.getID() + " is building a: " + building + "(" +  myUnit.getBuildType() + ") at " + buildTile + "minerals: " + me.minerals() + "(locked: " + minerals +  ") stack:" + buildOrder);// + " stack: " + areBeingBuilt + " occLoc: " + occupiedLocations);
+    			logger.log(Level.INFO, myUnit.getID() + " is building a: " + building + "(" +  myUnit.getBuildType() + ") at " + buildTile + "minerals: " + me.minerals() + "(locked: " + minerals +  ") stack:" + buildOrder);// + " stack: " + areBeingBuilt + " occLoc: " + occupiedLocations);
     			startedBuilding = true;
     			break;
     		}
@@ -168,15 +176,18 @@ public class Builder{
     public void updateStackForIdealSquad() {
     	for(UnitType unit: commander.idealSquad.keySet()) {
     		for(UnitType req: unit.requiredUnits().keySet()) {
-    			//System.out.println(req + " is needed for " + unit);
+    			//logger.log(Level.INFO, req + " is needed for " + unit);
     			if(ownedBuildingTypes.contains(req))
         			continue;
     			addToBuildStack(req);
     		}
     		TechType reqTech = unit.requiredTech();
-    		//System.out.println(reqTech + " is needed for " + unit);
+    		//logger.log(Level.INFO, reqTech + " is needed for " + unit);
     		if(reqTech != TechType.None && !ownedBuildingTypes.contains(reqTech))
     			addToBuildStack(reqTech.requiredUnit());
+    		else
+    			if(!me.hasResearched(reqTech))
+    				startTech(reqTech);
     	}
     }
     public void sendIdleMine() {
@@ -190,7 +201,7 @@ public class Builder{
     					if (closestMineral == null || myUnit.getDistance(neutralUnit) < myUnit.getDistance(closestMineral)) 
     						{
     							closestMineral = neutralUnit;
-    			        		//System.out.println("go mine ya fucker");
+    			        		//logger.log(Level.INFO, "go mine ya fucker");
     						}
     					
 		        //if a mineral patch was found, send the worker to gather it
@@ -240,7 +251,7 @@ public class Builder{
     		//if the building is in our build order, ignore it
     		if(buildOrder.contains(preReqType) || haveBuildingOfType(preReqType) || areBeingBuilt.contains(preReqType))
     			continue;
-    		System.out.println("Add building: " + preReqType + " to build stack because of: " + type);		
+    		logger.log(Level.INFO, "Add building: " + preReqType + " to build stack because of: " + type);		
     		//if the building isn't in our build order, check for its prerequisites
     		addToBuildStack(preReqType);
     	}
@@ -328,6 +339,37 @@ public class Builder{
     }
     
     public boolean startTechBuilding() { return false;}
+    
+    public boolean reserveResources(UnitType unit) {
+    	if(minerals > unit.mineralPrice() && gas > unit.gasPrice())
+    	{
+    		minerals -= unit.mineralPrice();
+    		gas -= unit.gasPrice();
+    		return true;
+    	}
+    	return false;
+    }
+    
+    public boolean reserveResources(TechType tech) {
+    	if(minerals > tech.mineralPrice() && gas > tech.gasPrice())
+    	{
+    		minerals -= tech.mineralPrice();
+    		gas -= tech.gasPrice();
+    		return true;
+    	}
+    	return false;
+    }
+    
+    public void startTech(TechType tech) {
+    	for(Unit u : me.getUnits())
+    	{
+    		if(!u.canResearch())
+    			return;
+    		if(u.canResearch(tech) && reserveResources(tech))
+    			u.research(tech);
+    		return;
+    	}
+    }
     
     public boolean alreadyBuilding(UnitType someBuilding) {
     	for(Unit myUnit: this.workers) 
@@ -465,7 +507,7 @@ public class Builder{
     	for(Unit t: busyWorkers)
     		if(t.isIdle()) {
     			busyWorkers.remove(t);
-    			System.out.println(t.getID() + " is no longer busy!");
+    			logger.log(Level.INFO, t.getID() + " is no longer busy!");
     		}
     	
     }
