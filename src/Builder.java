@@ -99,6 +99,10 @@ public class Builder{
 	 					}
 	 					if (!unitsInWay) {
 	 						occupiedLocations.add(new TilePosition(i, j));
+	 						for(int ct = 0; ct < buildingType.tileWidth(); ct++)
+	 							occupiedLocations.add(new TilePosition(i, j + ct));
+	 						for(int ct =0; ct < buildingType.tileHeight(); ct++)
+	 							occupiedLocations.add(new TilePosition(i + ct, j));
 	 						return new TilePosition(i, j);
 	 					}
 	 					// creep for Zerg
@@ -118,7 +122,7 @@ public class Builder{
 	 		maxDist += 2;
 	 	}
 
-	 	if (ret == null) game.printf("Unable to find suitable build position for " + buildingType.toString());
+	 	if (ret == null) game.printf("Unable to find suitable build position for " + buildingType.toString() + " with builder: " + builder.getID());
 	 	return ret;
 	}
 	
@@ -148,7 +152,9 @@ public class Builder{
 	
     public boolean buildClose(UnitType building, TilePosition place) {
     	boolean startedBuilding = false;
-    	for (Unit myUnit : workers) {    		
+    	for (Unit myUnit : workers) {
+    			if(myUnit.getHitPoints() <= 0 || !myUnit.canMove())
+    				continue; //really now
     			if(myUnit.getBuildType() != UnitType.None)
     				continue;
     			if(myUnit.isConstructing() || busyWorkers.contains(myUnit))
@@ -159,7 +165,7 @@ public class Builder{
     				break;
     			}
     			busyWorkers.add(myUnit);
-    			
+    			areBeingBuilt.add(building);
     			myUnit.build(building, buildTile);
     			//todo deal with what happens if a building is destroyed (it's going to remain an occupied location
     			logger.log(Level.INFO, myUnit.getID() + " is building a: " + building + "(" +  myUnit.getBuildType() + ") at " + buildTile + "minerals: " + me.minerals() + "(locked: " + minerals +  ") stack:" + buildOrder);// + " stack: " + areBeingBuilt + " occLoc: " + occupiedLocations);
@@ -177,7 +183,7 @@ public class Builder{
     	for(UnitType unit: commander.idealSquad.keySet()) {
     		for(UnitType req: unit.requiredUnits().keySet()) {
     			//logger.log(Level.INFO, req + " is needed for " + unit);
-    			if(ownedBuildingTypes.contains(req))
+    			if(ownedBuildingTypes.contains(req) || areBeingBuilt.contains(req))
         			continue;
     			addToBuildStack(req);
     		}
@@ -193,7 +199,7 @@ public class Builder{
     public void sendIdleMine() {
         //if it's a worker and it's idle, send it to the closest mineral patch
     	for(Unit myUnit : me.getUnits()) { 
-    		if (myUnit.isIdle() && myUnit.getType() == UnitType.Terran_SCV && !busyWorkers.contains(myUnit)) {
+    		if (myUnit.isIdle() && myUnit.getType() == UnitType.Terran_SCV) {
     			Unit closestMineral = null;
     			//find the closest mineral
     			for (Unit neutralUnit : game.neutral().getUnits()) 
@@ -201,14 +207,16 @@ public class Builder{
     					if (closestMineral == null || myUnit.getDistance(neutralUnit) < myUnit.getDistance(closestMineral)) 
     						{
     							closestMineral = neutralUnit;
-    			        		//logger.log(Level.INFO, "go mine ya fucker");
+    			        		
     						}
     					
 		        //if a mineral patch was found, send the worker to gather it
-		        if (closestMineral != null)
-		            myUnit.gather(closestMineral, false);
-		        workers.add(myUnit);
+		        if (closestMineral != null) {
+		        	myUnit.gather(closestMineral, false);
+		        	workers.add(myUnit);
+		        	//logger.log(Level.INFO, "go mine " + myUnit.getID());
 		    	}
+    		}
     		
     	}
     }
@@ -272,6 +280,7 @@ public class Builder{
 		    }
 		    //if we have enough resources to build this and whatever we want to build at this time
 	    	if(canBuild(building)) {
+	    		//game.setLocalSpeed(1);
 	    		//if we couldn't start building
 	    		if(!buildClose(building, me.getStartLocation()))
 	    			continue;
@@ -382,8 +391,11 @@ public class Builder{
 		if(me.supplyTotal() <= me.supplyUsed() + 5 && 
 				!alreadyBuilding(UnitType.Terran_Supply_Depot) && 
 				!buildOrder.contains(UnitType.Terran_Supply_Depot) && 
-				!areBeingBuilt.contains(UnitType.Terran_Supply_Depot))
+				!areBeingBuilt.contains(UnitType.Terran_Supply_Depot)) {
+			minerals -= UnitType.Terran_Supply_Depot.mineralPrice();
+    		gas -= UnitType.Terran_Supply_Depot.gasPrice();
 			addToBuildStack(UnitType.Terran_Supply_Depot);
+		}
     }
     
     public void minerals() {
@@ -419,7 +431,9 @@ public class Builder{
     				candidateGasWorkers.add(worker);
     			}
     	}
-    	for(int i = 0; i < 2 - nrOfGasMiners; i ++) {
+    	for(int i = 0; i < 1 - nrOfGasMiners; i ++) {
+    		if(gasExtractors.size() == 0)
+    			break;
     		candidateGasWorkers.get(i).gather(gasExtractors.iterator().next());
     	}
     	 
@@ -501,15 +515,18 @@ public class Builder{
     	stopTime = System.nanoTime();
     	game.drawTextScreen(10, 160, "builderSendIdleMine: " + (stopTime - startTime) / 1000000);
     	
+    	
     	trainArmy();
     	
-    	//mineGas();	
+    	mineGas();	
     	for(Unit t: busyWorkers)
     		if(t.isIdle()) {
     			busyWorkers.remove(t);
+    			workers.add(t);
     			logger.log(Level.INFO, t.getID() + " is no longer busy!");
-    		}
+    	}
     	
+
     }
     public void refreshAreBeingBuiltSet() {
     	areBeingBuilt.clear();

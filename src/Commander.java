@@ -19,6 +19,7 @@ public class Commander {
 	public  Logger logger = Logger.getLogger(ExampleBot.class.getName());
 	private static Game game;
 	private static Player me;
+	public static int attackSquadSize = 15;
 	public Builder builder;
 	public HashSet<Unit> squad;
 	public HashMap<UnitType, Integer> idealSquad;
@@ -166,10 +167,28 @@ public class Commander {
     	}
     } 
 	
-	public void defendBase() {
-		for(Unit myUnit:squad) {
-			myUnit.move(me.getStartLocation().toPosition());
+	public void gatherAtPoint(HashSet<Unit> squad, TilePosition location) {
+		logger.log(Level.INFO, "Squad of " + squad.size() + " is going to " + location + " !");
+		game.setLocalSpeed(1);
+		for(Unit u: squad) {
+			if(!u.isIdle())
+				continue;
+			u.attack(location.toPosition());
 		}
+	}
+	
+	public void defendBase() {
+		for(Unit u: me.getUnits())
+			if(u.getType().isBuilding())
+			{
+				List<Unit> unitsInRange = u.getUnitsInRadius(20);
+				for(Unit enemy: unitsInRange)
+				{
+					if(enemy.getPlayer().isEnemy(me))
+						gatherAtPoint(squad, u.getTilePosition());
+				}
+			}
+				
 	}
 	
 	public TilePosition establishTarget() {
@@ -177,26 +196,33 @@ public class Commander {
         	//if this unit is in fact a building
         	if (u.getType().isBuilding()) {
         		//check if we have it's position in memory and add it if we don't
-        		if (!enemyBuildingMemory.contains(u.getPosition())) 
+        		if (!enemyBuildingMemory.contains(u.getPosition())) {
         			enemyBuildingMemory.add(u.getPosition());
+        			logger.log(Level.INFO, "Found an enemy");
+        		}
+        		
         	}
         }
+		if(enemyBuildingMemory.size() == 0) {
+			return null;
+		}
 		return enemyBuildingMemory.iterator().next().toTilePosition();
 	}
 	
 	public void evaluateGame() {
 		myTarget = establishTarget();
 		refreshSquad();
-		if(validateSquad(squad, idealSquad) == true)
+		defendBase();
+		if(validateSquad(squad, idealSquad) && myTarget != null)
 		{
 			logger.log(Level.INFO, "Squad of " + squad.size() + " is attacking!");
 			sendMarines(squad, myTarget);
 		}
 		for(Unit u: squad) {
 			try {
-				logger.log(Level.INFO, "before evaluate");
+				//logger.log(Level.INFO, "before evaluate");
 				evaluateThreat(u);
-				logger.log(Level.INFO, "after evaluate");
+				//logger.log(Level.INFO, "after evaluate");
 			}
 			catch(Exception e) {
 				e.printStackTrace();

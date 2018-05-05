@@ -60,9 +60,13 @@ public class ExampleBot extends DefaultBWListener {
     	if(commander.enemyBuildingMemory.size() > 0) {
     		scout.move(self.getStartLocation().toPosition());
     		builder.workers.add(scout);
+    		logger.log(Level.INFO, scout.getID() + " found the enemy!");
     		scout = null;
     		bScouted = true;
+    		
     	}
+    	if(scout == null)
+    		return;
     	if(scout.isIdle())
     		scout.move(startingLocations.pop().toPosition());
     }
@@ -71,13 +75,17 @@ public class ExampleBot extends DefaultBWListener {
     
 
     public void evaluateGame() {
-		builder.evaluateGame();
-    	commander.evaluateGame();
-    	for(Unit squadee: commander.squad) {
-    		for(Unit bunker: bunkers)
-    			commander.getInBunker(bunker, squadee);
-    	}
-    	
+		try {
+			builder.evaluateGame();
+			commander.evaluateGame();
+			for(Unit squadee: commander.squad) {
+				for(Unit bunker: bunkers)
+					commander.getInBunker(bunker, squadee);
+			}
+		}
+		catch(Exception e) {
+			e.printStackTrace();
+		}
     }
     
     @Override
@@ -89,6 +97,11 @@ public class ExampleBot extends DefaultBWListener {
     @Override
     public void onUnitComplete(Unit unit) {
     	
+        if(unit.getType().isBuilding()) {
+            builder.areBeingBuilt.remove(unit);
+            builder.occupiedLocations.clear();
+        }
+
         if(unit.getType() == UnitType.Terran_SCV) {
         	builder.workers.add(unit);
         }
@@ -129,6 +142,7 @@ public class ExampleBot extends DefaultBWListener {
         BWTA.analyze();
         logger.log(Level.INFO, "Map data ready");
         bScouted = false;
+        scout = null;
         bunkers = new ArrayList<Unit>();
         startingLocations = new Stack<TilePosition>();
         
@@ -156,7 +170,7 @@ public class ExampleBot extends DefaultBWListener {
     	//debug business
     	int gasMiners = 0;
     	for(Unit u: builder.workers) {
-    		game.drawTextMap(u.getPosition(),"" + u.getID());
+    		game.drawTextMap(u.getPosition(),"" + u.isIdle() + " " + u.getID());
     		if(u.isGatheringGas())
     			gasMiners++;
     	}
