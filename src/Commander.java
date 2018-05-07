@@ -168,7 +168,7 @@ public class Commander {
     } 
 	
 	public void gatherAtPoint(HashSet<Unit> squad, TilePosition location) {
-		logger.log(Level.INFO, "Squad of " + squad.size() + " is going to " + location + " !");
+		//logger.log(Level.INFO, "Squad of " + squad.size() + " is going to " + location + " !");
 		game.setLocalSpeed(1);
 		for(Unit u: squad) {
 			if(!u.isIdle())

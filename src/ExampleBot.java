@@ -32,6 +32,9 @@ public class ExampleBot extends DefaultBWListener {
     //building stack & other stuff
     private static Builder builder;
     
+    //strategy decider / ai?
+    private static StrategyController strategyController;
+    
     private boolean bScouted = false;
     
     //bad scouting strats
@@ -78,10 +81,13 @@ public class ExampleBot extends DefaultBWListener {
 		try {
 			builder.evaluateGame();
 			commander.evaluateGame();
+			strategyController.evaluateGame();
+			/*
 			for(Unit squadee: commander.squad) {
 				for(Unit bunker: bunkers)
 					commander.getInBunker(bunker, squadee);
 			}
+			*/
 		}
 		catch(Exception e) {
 			e.printStackTrace();
@@ -151,6 +157,9 @@ public class ExampleBot extends DefaultBWListener {
         commander = new Commander(game, self);
         //initialize builder
         builder = new Builder(game,self);
+        //initialize strategy controller;
+        strategyController = new StrategyController(game, self, builder, commander);
+        
         builder.setCommander(commander);
         commander.setBuilder(builder);
         Builder.gas = 0;
