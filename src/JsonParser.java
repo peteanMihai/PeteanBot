@@ -15,12 +15,38 @@ import bwapi.UnitType;
 
 public class JsonParser{
 	private static Gson gson = new Gson();
+	public static UnitType[] unitList = {
+			UnitType.Terran_Firebat,
+			UnitType.Terran_Ghost,
+			UnitType.Terran_Goliath,
+			UnitType.Terran_Marine,
+			UnitType.Terran_Medic,
+			UnitType.Terran_Siege_Tank_Tank_Mode,
+			UnitType.Terran_Vulture,
+			UnitType.Terran_Vulture_Spider_Mine,
+			UnitType.Terran_Battlecruiser,
+			UnitType.Terran_Dropship,
+			UnitType.Terran_Nuclear_Missile,
+			UnitType.Terran_Science_Vessel,
+			UnitType.Terran_Valkyrie,
+			UnitType.Terran_Wraith};
+	
 	
 	public static void init() {
-		stringToUnitType.put("Terran_Marine", UnitType.Terran_Marine);
-		stringToUnitType.put("Terran_Medic", UnitType.Terran_Medic);
-		stringToUnitType.put("Terran_Vulture", UnitType.Terran_Vulture);
-		stringToUnitType.put("Terran_Siege_Tank_Tank_Mode", UnitType.Terran_Siege_Tank_Tank_Mode);
+	 	stringToUnitType.put("Terran_Firebat", UnitType.Terran_Firebat);
+	 	stringToUnitType.put("Terran_Ghost", UnitType.Terran_Ghost);
+	 	stringToUnitType.put("Terran_Goliath", UnitType.Terran_Goliath);
+	 	stringToUnitType.put("Terran_Marine", UnitType.Terran_Marine);
+	 	stringToUnitType.put("Terran_Medic", UnitType.Terran_Medic);
+	 	stringToUnitType.put("Terran_Siege_Tank_Tank_Mode", UnitType.Terran_Siege_Tank_Tank_Mode);
+	 	stringToUnitType.put("Terran_Vulture", UnitType.Terran_Vulture);
+	 	stringToUnitType.put("Terran_Vulture_Spider_Mine", UnitType.Terran_Vulture_Spider_Mine);
+	 	stringToUnitType.put("Terran_Battlecruiser", UnitType.Terran_Battlecruiser);
+	 	stringToUnitType.put("Terran_Dropship", UnitType.Terran_Dropship);
+	 	stringToUnitType.put("Terran_Nuclear_Missile", UnitType.Terran_Nuclear_Missile);
+	 	stringToUnitType.put("Terran_Science_Vessel", UnitType.Terran_Science_Vessel);
+	 	stringToUnitType.put("Terran_Valkyrie", UnitType.Terran_Valkyrie);
+	 	stringToUnitType.put("Terran_Wraith", UnitType.Terran_Wraith);
 	};
 
 	

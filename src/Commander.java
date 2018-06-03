@@ -13,6 +13,8 @@ import bwapi.Unit;
 import bwapi.UnitType;
 import bwapi.UpgradeType;
 import bwapi.WeaponType;
+import bwta.BWTA;
+import bwta.Chokepoint;
 
 import java.util.logging.*;
 public class Commander {
@@ -167,9 +169,15 @@ public class Commander {
     	}
     } 
 	
+	public void sendSquadChokePoint(HashSet<Unit> squad) {
+		for(Chokepoint a : BWTA.getChokepoints()) {
+			Position pos = a.getCenter();
+		}
+	}
+	
 	public void gatherAtPoint(HashSet<Unit> squad, TilePosition location) {
 		//logger.log(Level.INFO, "Squad of " + squad.size() + " is going to " + location + " !");
-		game.setLocalSpeed(1);
+		//game.setLocalSpeed(1);
 		for(Unit u: squad) {
 			if(!u.isIdle())
 				continue;

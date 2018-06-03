@@ -82,12 +82,7 @@ public class ExampleBot extends DefaultBWListener {
 			builder.evaluateGame();
 			commander.evaluateGame();
 			strategyController.evaluateGame();
-			/*
-			for(Unit squadee: commander.squad) {
-				for(Unit bunker: bunkers)
-					commander.getInBunker(bunker, squadee);
-			}
-			*/
+			
 		}
 		catch(Exception e) {
 			e.printStackTrace();
@@ -139,6 +134,9 @@ public class ExampleBot extends DefaultBWListener {
     @Override
     public void onStart() {
         game = mirror.getGame();
+        for(Player a: game.getPlayers()) {
+        	 logger.log(Level.INFO, "Player " + a.getName() + " is playing " + a.getRace());
+        }
         game.setLocalSpeed(0);
         self = game.self();
         //Use BWTA to analyze map
@@ -152,7 +150,7 @@ public class ExampleBot extends DefaultBWListener {
         bunkers = new ArrayList<Unit>();
         startingLocations = new Stack<TilePosition>();
         
-
+        
         //initialize commander
         commander = new Commander(game, self);
         //initialize builder
@@ -173,6 +171,11 @@ public class ExampleBot extends DefaultBWListener {
         logger.log(Level.INFO, "initialization complete");
     }
 
+    @Override
+    public void onEnd(boolean isWinner) {
+    	//code for measuring individuals, calculating fitness, etc.
+    }
+    
     @Override
     public void onFrame() {
     	
