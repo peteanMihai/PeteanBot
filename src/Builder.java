@@ -197,7 +197,7 @@ public class Builder {
 	}
 
 	public void initBuildStack() {
-		addToBuildStack(UnitType.Terran_Refinery);
+		//let's not talk about this for now
 	}
 
 	public void updateStackForIdealSquad() {
@@ -296,27 +296,33 @@ public class Builder {
 	}
 
 	public void buildFromStack() {
+		if(buildOrder.isEmpty())
+			return;
+		ArrayList<UnitType> toRemove = new ArrayList<>();
 		for (UnitType building : buildOrder) {
 			if (building == UnitType.None) {
-				buildOrder.remove(building);
-				break;
+				continue;
 			}
 			// if we have enough resources to build this and whatever we want to build at
 			// this time
 			if (canBuild(building)) {
 				// game.setLocalSpeed(1);
 				// if we couldn't start building
-				if (!buildClose(building, me.getStartLocation()))
+				if (!buildClose(building, me.getStartLocation())) {
+					toRemove.add(building);
 					continue;
+				}
 				addPreReq(building);
 				// make sure we actually can build this
 				minerals -= building.mineralPrice();
 				gas -= building.gasPrice();
-				buildOrder.remove(building);
+				toRemove.add(building);
 				// might need to only do one per frame because of silly bug
 				break;
 			}
 		}
+		for(UnitType building: toRemove)
+			buildOrder.remove(building);
 	}
 
 	public void startUpgrade(UpgradeType type) {
@@ -436,6 +442,9 @@ public class Builder {
 	}
 
 	public void extractorCheck() {
+		for(Unit u: me.getUnits())
+			if(u.getType() == UnitType.Terran_Refinery)
+				return;
 		if (gasExtractors.isEmpty() && !areBeingBuilt.contains(UnitType.Terran_Refinery)
 				&& !buildOrder.contains(UnitType.Terran_Refinery))
 			addToBuildStack(UnitType.Terran_Refinery);
@@ -534,6 +543,10 @@ public class Builder {
 		stopTime = System.nanoTime();
 		game.drawTextScreen(10, 140, "builderSupply: " + (stopTime - startTime) / 1000000);
 
+		for(Unit u: me.getUnits())
+			if(u.getType() == UnitType.Terran_Refinery)
+				buildOrder.remove(UnitType.Terran_Refinery);
+		
 		startTime = System.nanoTime();
 		buildFromStack();
 		stopTime = System.nanoTime();
@@ -545,16 +558,19 @@ public class Builder {
 		stopTime = System.nanoTime();
 		game.drawTextScreen(10, 160, "builderSendIdleMine: " + (stopTime - startTime) / 1000000);
 
+		extractorCheck();
 		trainArmy();
-
+		ArrayList<Unit> toRemoveBusyWorkers = new ArrayList<>();
 		mineGas();
 		for (Unit t : busyWorkers)
 			if (t.isIdle()) {
-				busyWorkers.remove(t);
+				toRemoveBusyWorkers.add(t);
 				workers.add(t);
 				logger.log(Level.INFO, t.getID() + " is no longer busy!");
 			}
-
+		for(Unit t : toRemoveBusyWorkers) {
+			busyWorkers.remove(t);
+		}
 	}
 
 	public void refreshAreBeingBuiltSet() {

@@ -17,21 +17,25 @@ import bwapi.UnitType;
  	Terran_Nuclear_Missile
  	Terran_Science_Vessel
  	Terran_Valkyrie
- 	Terran_Wraith
+ 	Terran_Wraith 
  */
 
 public class Individual {
 	
-	public Integer fitnessScore;
+	public float fitnessScore;
 	public ArrayList<Integer> unitsGenome;
 	public Integer enemyRace = 0; //1 terran, 2 protoss, 3 zerg
 	public Individual(ArrayList<Integer> existingGenome) {
 		this.unitsGenome = existingGenome;
 	}
 	public Individual() {
-		this.unitsGenome = new ArrayList<>(13);
+		this.unitsGenome = new ArrayList<>(JsonParser.unitList.length);
+		//bad code?
+		for(int i = 0; i < JsonParser.unitList.length; i ++) {
+			this.unitsGenome.add(0);
+		}
 	}
-	public void calculateFitness(int buildingToKillRatio, int buildingScore, int killScore) {
+	public void calculateFitness(float buildingToKillRatio, int buildingScore, int killScore) {
 		fitnessScore = buildingToKillRatio * buildingScore + (1 - buildingToKillRatio) * killScore;
 	}
 	
@@ -47,7 +51,7 @@ public class Individual {
 			newIndividual = null;
 		}
 		
-		int dominantRatio = b.fitnessScore / a.fitnessScore;
+		float dominantRatio = b.fitnessScore / a.fitnessScore;
 		
 		for(int i = 0; i < a.unitsGenome.size(); i ++) {
 			if(rn.nextFloat() > dominantRatio)

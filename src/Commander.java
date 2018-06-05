@@ -31,9 +31,25 @@ public class Commander {
 		this.game = theGame;
 		this.me = me;
 		squad = new HashSet<Unit>();
-		idealSquad = new HashMap<>();
+		idealSquad = new HashMap<UnitType, Integer>();
 		enemyBuildingMemory = new HashSet<Position>();
-		init();
+		JsonParser.init();
+		initSquadFile();
+	}
+	
+	public Commander(Game theGame, Player me, ArrayList<Integer> idealSquadInt) {
+		this.game = theGame;
+		this.me = me;
+		squad = new HashSet<Unit>();
+		idealSquad = new HashMap<UnitType, Integer>();
+		enemyBuildingMemory = new HashSet<Position>();
+		JsonParser.init();
+		initSquad(idealSquadInt);
+	}
+	
+	public void initSquad(ArrayList<Integer> idealSquadInt) {
+		idealSquad = JsonParser.loadSquadInd(idealSquadInt);
+		logger.log(Level.INFO, "Ideal squad loaded: " + idealSquad);
 	}
 	
 	public void setBuilder(Builder bld) {
@@ -44,7 +60,7 @@ public class Commander {
 		return builder;
 	}
 	
-	public void init() {
+	public void initSquadFile() {
 		try {
 			JsonParser.init();
 			idealSquad = JsonParser.loadSquad("marineMedic.json");
@@ -53,7 +69,7 @@ public class Commander {
 			e.printStackTrace();
 		}
 		
-		logger.log(Level.INFO, "Ideal squad loaded: " + idealSquad);
+		logger.log(Level.INFO, "Ideal squad loaded FROM FILE : " + idealSquad);
 		//idealSquad.put(UnitType.Terran_Marine, 20);
 		//idealSquad.put(UnitType.Terran_Medic, 5);
 		

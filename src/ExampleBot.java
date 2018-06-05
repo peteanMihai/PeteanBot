@@ -1,8 +1,12 @@
 import java.io.FileNotFoundException;
+import java.io.UnsupportedEncodingException;
+import java.sql.Timestamp;
+import java.text.SimpleDateFormat;
 import java.util.ArrayDeque;
 import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.HashSet;
+import java.util.Iterator;
 import java.util.LinkedList;
 import java.util.List;
 import java.util.PriorityQueue;
@@ -32,8 +36,14 @@ public class ExampleBot extends DefaultBWListener {
     //building stack & other stuff
     private static Builder builder;
     
-    //strategy decider / ai?
+    //strategy decider / ai? deprecated/unused
     private static StrategyController strategyController;
+    
+    private static EAController eaSquad;
+    
+    private static  Iterator<Individual> itIndividual;
+    
+    public static Individual individual;
     
     private boolean bScouted = false;
     
@@ -102,7 +112,6 @@ public class ExampleBot extends DefaultBWListener {
             builder.areBeingBuilt.remove(unit);
             builder.occupiedLocations.clear();
         }
-
         if(unit.getType() == UnitType.Terran_SCV) {
         	builder.workers.add(unit);
         }
@@ -149,15 +158,34 @@ public class ExampleBot extends DefaultBWListener {
         scout = null;
         bunkers = new ArrayList<Unit>();
         startingLocations = new Stack<TilePosition>();
+         
+        logger.log(Level.INFO, "EASquad setting");
+        if(itIndividual == null) {
+        	SimpleDateFormat sdf = new SimpleDateFormat("yyyy.MM.dd.HH.mm.ss");
+        	Timestamp ts = new Timestamp(System.currentTimeMillis());
+        	logger.log(Level.INFO, "Logging EASquad to file");
+        	try {
+				eaSquad.writeResults("EASquadLog" + sdf.format(ts)+ ".txt");
+			} catch (FileNotFoundException e) {
+				// TODO Auto-generated catch block
+				logger.log(Level.INFO, e.toString());
+			} catch (UnsupportedEncodingException e) {
+				// TODO Auto-generated catch block
+				logger.log(Level.INFO, e.toString());
+			}
+        	logger.log(Level.INFO, "Trying EASquad Crossover");
+        	eaSquad.crossOverPopulation();
+        	itIndividual = eaSquad.population.iterator();
+        }
         
-        
+        individual = itIndividual.next();
+        logger.log(Level.INFO, "Got EASquad individual" + individual.unitsGenome.toString());
         //initialize commander
-        commander = new Commander(game, self);
+        commander = new Commander(game, self, individual.unitsGenome);
         //initialize builder
         builder = new Builder(game,self);
         //initialize strategy controller;
         strategyController = new StrategyController(game, self, builder, commander);
-        
         builder.setCommander(commander);
         commander.setBuilder(builder);
         Builder.gas = 0;
@@ -169,11 +197,12 @@ public class ExampleBot extends DefaultBWListener {
     	}
        
         logger.log(Level.INFO, "initialization complete");
-    }
+    } 
 
     @Override
     public void onEnd(boolean isWinner) {
     	//code for measuring individuals, calculating fitness, etc.
+    	individual.calculateFitness(0.2f, self.getBuildingScore(), self.getKillScore());
     }
     
     @Override
@@ -208,6 +237,9 @@ public class ExampleBot extends DefaultBWListener {
 
     
     public static void main(String[] args) {
+    	eaSquad = new EAController(5, 0.1f);
+    	itIndividual = eaSquad.population.iterator();
+    	assert(itIndividual.hasNext());
         new ExampleBot().run();
     }
 }

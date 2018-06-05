@@ -3,6 +3,7 @@ import java.io.FileNotFoundException;
 import java.io.FileReader;
 import java.io.IOException;
 import java.io.PrintWriter;
+import java.util.ArrayList;
 import java.util.HashMap;
 
 import com.google.gson.Gson;
@@ -29,7 +30,8 @@ public class JsonParser{
 			UnitType.Terran_Nuclear_Missile,
 			UnitType.Terran_Science_Vessel,
 			UnitType.Terran_Valkyrie,
-			UnitType.Terran_Wraith};
+			UnitType.Terran_Wraith
+	};
 	
 	
 	public static void init() {
@@ -61,22 +63,40 @@ public class JsonParser{
 		writer.close();
 	}
 	
-	public static HashMap<UnitType, Double> loadBuild(String fileName) throws FileNotFoundException{
-		BufferedReader reader = new BufferedReader(new FileReader(fileName));
-		String json = new String();
-		String jsonLine = new String();
-		HashMap<UnitType, Double> result = new HashMap<UnitType, Double>();
-		try {
-			while((jsonLine = reader.readLine()) != null) {
-				json += "\n" + jsonLine;
+	
+	public static HashMap<UnitType, Integer> loadSquadInd(ArrayList<Integer> genome){
+		//if we try to access the global one it crashes!
+		UnitType[] unitList = {
+				UnitType.Terran_Firebat,
+				UnitType.Terran_Ghost,
+				UnitType.Terran_Goliath,
+				UnitType.Terran_Marine,
+				UnitType.Terran_Medic,
+				UnitType.Terran_Siege_Tank_Tank_Mode,
+				UnitType.Terran_Vulture,
+				UnitType.Terran_Vulture_Spider_Mine,
+				UnitType.Terran_Battlecruiser,
+				UnitType.Terran_Dropship,
+				UnitType.Terran_Nuclear_Missile,
+				UnitType.Terran_Science_Vessel,
+				UnitType.Terran_Valkyrie,
+				UnitType.Terran_Wraith
+		}; 
+		ArrayList<UnitType> safeUnitList = new ArrayList<>();
+		HashMap<UnitType, Integer> result = new HashMap<UnitType, Integer>();
+		for(int i = 0; i < unitList.length; i ++) {
+			safeUnitList.add(unitList[i]);
+		}
+		System.out.println(safeUnitList.toString());
+		for(int i = 0; i < unitList.length; i++) {
+				if(genome.get(i) != null && genome.get(i) > 0 && JsonParser.unitList[i] != null) {
+					result.put(safeUnitList.get(i), genome.get(i).intValue());
+					
+				}
 			}
-		}
-		 catch (IOException e) {
-				// TODO Auto-generated catch block
-				e.printStackTrace();
-		}
-			
+		System.out.println("result: " + result);	
 		return result;
+		
 	}
 	
 	public static HashMap<UnitType, Integer> loadSquad(String filename) throws FileNotFoundException{
