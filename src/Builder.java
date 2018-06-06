@@ -518,6 +518,7 @@ public class Builder {
 		stopTime = System.nanoTime();
 		game.drawTextScreen(10, 90, "builderRefresh: " + (stopTime - startTime) / 1000000);
 
+		/*
 		startTime = System.nanoTime();
 		// evaluateTech();
 		stopTime = System.nanoTime();
@@ -537,11 +538,11 @@ public class Builder {
 		// bunker();
 		stopTime = System.nanoTime();
 		game.drawTextScreen(10, 130, "builderBunker: " + (stopTime - startTime) / 1000000);
-
+		*/
 		startTime = System.nanoTime();
 		supply();
 		stopTime = System.nanoTime();
-		game.drawTextScreen(10, 140, "builderSupply: " + (stopTime - startTime) / 1000000);
+		game.drawTextScreen(10, 100, "builderSupply: " + (stopTime - startTime) / 1000000);
 
 		for(Unit u: me.getUnits())
 			if(u.getType() == UnitType.Terran_Refinery)
@@ -550,13 +551,13 @@ public class Builder {
 		startTime = System.nanoTime();
 		buildFromStack();
 		stopTime = System.nanoTime();
-		game.drawTextScreen(10, 150, "builderBuildFromStack: " + (stopTime - startTime) / 1000000);
+		game.drawTextScreen(10, 110, "builderBuildFromStack: " + (stopTime - startTime) / 1000000);
 
 		startTime = System.nanoTime();
 		// worker orders
 		sendIdleMine();
 		stopTime = System.nanoTime();
-		game.drawTextScreen(10, 160, "builderSendIdleMine: " + (stopTime - startTime) / 1000000);
+		game.drawTextScreen(10, 120, "builderSendIdleMine: " + (stopTime - startTime) / 1000000);
 
 		extractorCheck();
 		trainArmy();
@@ -586,5 +587,17 @@ public class Builder {
 			if (!res.contains(u.getType()))
 				res.add(u.getType());
 		ownedBuildingTypes = res;
+	}
+	
+	public void reset() {
+		commander = null;
+		ownedBuildingTypes = null;
+		gasExtractors = null;
+		buildOrder = null;
+		areBeingBuilt = null;
+		workers = null;
+		busyWorkers = null;
+		occupiedLocations = null;
+		barrackCount = 0;
 	}
 }

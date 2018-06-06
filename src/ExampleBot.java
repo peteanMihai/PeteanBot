@@ -1,4 +1,5 @@
 import java.io.FileNotFoundException;
+import java.io.IOException;
 import java.io.UnsupportedEncodingException;
 import java.sql.Timestamp;
 import java.text.SimpleDateFormat;
@@ -160,21 +161,18 @@ public class ExampleBot extends DefaultBWListener {
         startingLocations = new Stack<TilePosition>();
          
         logger.log(Level.INFO, "EASquad setting");
-        if(itIndividual == null) {
-        	SimpleDateFormat sdf = new SimpleDateFormat("yyyy.MM.dd.HH.mm.ss");
-        	Timestamp ts = new Timestamp(System.currentTimeMillis());
+        if(itIndividual == null || itIndividual.hasNext() == false) {
+        	
         	logger.log(Level.INFO, "Logging EASquad to file");
         	try {
-				eaSquad.writeResults("EASquadLog" + sdf.format(ts)+ ".txt");
-			} catch (FileNotFoundException e) {
-				// TODO Auto-generated catch block
-				logger.log(Level.INFO, e.toString());
-			} catch (UnsupportedEncodingException e) {
+				eaSquad.writeResults("EASquadLog" + eaSquad.name + ".txt");
+			} catch (IOException e) {
 				// TODO Auto-generated catch block
 				logger.log(Level.INFO, e.toString());
 			}
         	logger.log(Level.INFO, "Trying EASquad Crossover");
         	eaSquad.crossOverPopulation();
+        	logger.log(Level.INFO, "Done EASquad Crossover");
         	itIndividual = eaSquad.population.iterator();
         }
         
@@ -203,6 +201,19 @@ public class ExampleBot extends DefaultBWListener {
     public void onEnd(boolean isWinner) {
     	//code for measuring individuals, calculating fitness, etc.
     	individual.calculateFitness(0.2f, self.getBuildingScore(), self.getKillScore());
+    	reset();
+    }
+    
+    public void reset() {
+    	commander.reset();
+    	builder.reset();
+    	commander = null;
+    	builder = null;
+    	strategyController  = null;
+    	bScouted = false;
+    	scout = null;
+    	bunkers = new ArrayList<Unit>();
+    	startingLocations = new Stack<TilePosition>();
     }
     
     @Override
@@ -237,7 +248,7 @@ public class ExampleBot extends DefaultBWListener {
 
     
     public static void main(String[] args) {
-    	eaSquad = new EAController(5, 0.1f);
+    	eaSquad = new EAController(10, 0.2f);
     	itIndividual = eaSquad.population.iterator();
     	assert(itIndividual.hasNext());
         new ExampleBot().run();

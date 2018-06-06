@@ -253,4 +253,12 @@ public class Commander {
 			}
 		}
 	}
+	
+	public void reset() {
+		builder = null;
+		squad = null;
+		idealSquad = null;
+		enemyBuildingMemory = null;
+		myTarget = null;
+	}
 }

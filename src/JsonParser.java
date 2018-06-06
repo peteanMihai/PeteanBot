@@ -27,7 +27,6 @@ public class JsonParser{
 			UnitType.Terran_Vulture_Spider_Mine,
 			UnitType.Terran_Battlecruiser,
 			UnitType.Terran_Dropship,
-			UnitType.Terran_Nuclear_Missile,
 			UnitType.Terran_Science_Vessel,
 			UnitType.Terran_Valkyrie,
 			UnitType.Terran_Wraith
@@ -45,7 +44,6 @@ public class JsonParser{
 	 	stringToUnitType.put("Terran_Vulture_Spider_Mine", UnitType.Terran_Vulture_Spider_Mine);
 	 	stringToUnitType.put("Terran_Battlecruiser", UnitType.Terran_Battlecruiser);
 	 	stringToUnitType.put("Terran_Dropship", UnitType.Terran_Dropship);
-	 	stringToUnitType.put("Terran_Nuclear_Missile", UnitType.Terran_Nuclear_Missile);
 	 	stringToUnitType.put("Terran_Science_Vessel", UnitType.Terran_Science_Vessel);
 	 	stringToUnitType.put("Terran_Valkyrie", UnitType.Terran_Valkyrie);
 	 	stringToUnitType.put("Terran_Wraith", UnitType.Terran_Wraith);
@@ -77,7 +75,6 @@ public class JsonParser{
 				UnitType.Terran_Vulture_Spider_Mine,
 				UnitType.Terran_Battlecruiser,
 				UnitType.Terran_Dropship,
-				UnitType.Terran_Nuclear_Missile,
 				UnitType.Terran_Science_Vessel,
 				UnitType.Terran_Valkyrie,
 				UnitType.Terran_Wraith
