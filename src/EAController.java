@@ -7,6 +7,9 @@ import java.io.UnsupportedEncodingException;
 import java.sql.Timestamp;
 import java.text.SimpleDateFormat;
 import java.util.ArrayList;
+import java.util.Arrays;
+import java.util.Collections;
+import java.util.Comparator;
 import java.util.Random;
 import java.util.logging.Level;
 import java.util.logging.Logger;
@@ -28,7 +31,7 @@ public class EAController {
 	}
 	
 	public EAController(int populationLimit, float mutationFactor) {
-		name = fileName();
+		name = "EASquadLog" + fileName() + ".txt";
 		Random rn = new Random();
 		EAController.mutationFactor = mutationFactor;
 		this.population = new ArrayList<Individual>(populationLimit);
@@ -49,18 +52,21 @@ public class EAController {
 		ArrayList<Individual> replacements = new ArrayList<>(population.size());
 		logger.log(Level.INFO, "Initial population size: " + population.size());
 		Individual newIndividual = null;
-		for(Individual i: population) {
-			if(i.fitnessScore >= averageFitness) {
-				newIndividual = i;
-				logger.log(Level.INFO, "Trying to mutate " + i);
+		population.sort((Individual a, Individual b) -> (int)(b.fitnessScore - a.fitnessScore));
+		System.out.println("population: " + population);
+		
+		for(int i = 0; i < population.size() /2 ; i ++) {
+				//good individual keeps living
+				newIndividual = population.get(i);
+				newIndividual.mutate(mutationFactor, mutationImpact);
+				replacements.add(newIndividual);
 				
+				//crossover 2 good individuals
+				newIndividual = Individual.createNew(population.get(i), population.get(i + 1));
+				newIndividual.mutate(mutationFactor, mutationImpact);
+				replacements.add(newIndividual);
 			}
-			else {
-				newIndividual = Individual.createNew(i, best);
-			}
-			newIndividual.mutate(mutationFactor, mutationImpact);
-			replacements.add(newIndividual);
-		}
+		
 		logger.log(Level.INFO, "Population size before replacements: " + population.size());
 		population = replacements;
 		logger.log(Level.INFO, "Population size after replacements: " + population.size());
@@ -92,10 +98,7 @@ public class EAController {
 	
 	public void writeResults(String fileName) throws IOException {
 		PrintWriter writer =  new PrintWriter(new BufferedWriter(new FileWriter(fileName, true)));
-		writer.println("Generation: " + generationCounter);
-		for(Individual i : population) {
-			writer.println(i.unitsGenome.toString() + " FITNESS: " + i.fitnessScore);
-		}
+		writer.println("GENERATION: " + generationCounter + " DONE WITH: " + averageFitness() + " AVERAGE FITNESS");
 		writer.close();
 	}
 }

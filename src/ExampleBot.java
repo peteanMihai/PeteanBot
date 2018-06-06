@@ -1,5 +1,8 @@
+import java.io.BufferedWriter;
 import java.io.FileNotFoundException;
+import java.io.FileWriter;
 import java.io.IOException;
+import java.io.PrintWriter;
 import java.io.UnsupportedEncodingException;
 import java.sql.Timestamp;
 import java.text.SimpleDateFormat;
@@ -89,6 +92,8 @@ public class ExampleBot extends DefaultBWListener {
     
 
     public void evaluateGame() {
+    	if(game.elapsedTime() > 7200)
+    		game.leaveGame();
 		try {
 			builder.evaluateGame();
 			commander.evaluateGame();
@@ -152,8 +157,14 @@ public class ExampleBot extends DefaultBWListener {
         //Use BWTA to analyze map
         //This may take a few minutes if the map is processed first time!
         logger.log(Level.INFO, "Analyzing map...");
-        BWTA.readMap();
-        BWTA.analyze();
+        try{
+        	BWTA.readMap();
+        	BWTA.analyze();
+        }
+        catch(Exception e) {
+        	game.leaveGame();
+        }
+        
         logger.log(Level.INFO, "Map data ready");
         bScouted = false;
         scout = null;
@@ -165,7 +176,7 @@ public class ExampleBot extends DefaultBWListener {
         	
         	logger.log(Level.INFO, "Logging EASquad to file");
         	try {
-				eaSquad.writeResults("EASquadLog" + eaSquad.name + ".txt");
+				eaSquad.writeResults(eaSquad.name);
 			} catch (IOException e) {
 				// TODO Auto-generated catch block
 				logger.log(Level.INFO, e.toString());
@@ -201,6 +212,16 @@ public class ExampleBot extends DefaultBWListener {
     public void onEnd(boolean isWinner) {
     	//code for measuring individuals, calculating fitness, etc.
     	individual.calculateFitness(0.2f, self.getBuildingScore(), self.getKillScore());
+    	PrintWriter writer;
+		try {
+			writer = new PrintWriter(new BufferedWriter(new FileWriter(eaSquad.name, true)));
+			writer.println(individual.unitsGenome.toString() + " FITNESS: " + individual.fitnessScore + " TIME ELAPSED: " + game.elapsedTime());
+			writer.close();
+		} catch (IOException e) {
+			// TODO Auto-generated catch block
+			e.printStackTrace();
+		}
+		
     	reset();
     }
     
@@ -248,7 +269,7 @@ public class ExampleBot extends DefaultBWListener {
 
     
     public static void main(String[] args) {
-    	eaSquad = new EAController(10, 0.2f);
+    	eaSquad = new EAController(10, 0.5f);
     	itIndividual = eaSquad.population.iterator();
     	assert(itIndividual.hasNext());
         new ExampleBot().run();

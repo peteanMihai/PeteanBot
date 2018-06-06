@@ -100,8 +100,8 @@ public class Builder {
 						for (Unit u : game.getAllUnits()) {
 							if (u.getID() == builder.getID())
 								continue;
-							if ((Math.abs(u.getTilePosition().getX() - i) < 4)
-									&& (Math.abs(u.getTilePosition().getY() - j) < 4))
+							if ((Math.abs(u.getTilePosition().getX() - i) < 6)
+									&& (Math.abs(u.getTilePosition().getY() - j) < 6))
 								unitsInWay = true;
 						}
 						if (!unitsInWay) {
@@ -421,7 +421,7 @@ public class Builder {
 	}
 
 	public void supply() {
-		if (me.supplyTotal() <= me.supplyUsed() + 5 && !alreadyBuilding(UnitType.Terran_Supply_Depot)
+		if (me.supplyTotal() <= me.supplyUsed() + 10 && !alreadyBuilding(UnitType.Terran_Supply_Depot)
 				&& !buildOrder.contains(UnitType.Terran_Supply_Depot)
 				&& !areBeingBuilt.contains(UnitType.Terran_Supply_Depot)) {
 			minerals -= UnitType.Terran_Supply_Depot.mineralPrice();
@@ -434,9 +434,21 @@ public class Builder {
 		// iterate through my units
 		for (Unit myUnit : me.getUnits()) {
 			// if there's enough minerals, train an SCV
-			if (myUnit.getType() == UnitType.Terran_Command_Center && workers.size() < 15 && minerals > 50) {
+			if (myUnit.getType() == UnitType.Terran_Command_Center && workers.size() < 20 && minerals > 50) {
 				myUnit.train(UnitType.Terran_SCV);
 				minerals -= 50;
+			}
+		}
+	}
+	
+	public void repair() {
+		for(Unit myUnit : me.getUnits()) {
+			if(myUnit.getType().isBuilding() && 
+					!myUnit.isBeingConstructed() && 
+					(myUnit.getHitPoints() < myUnit.getType().maxHitPoints())){
+				for(Unit myUnit2 : workers){
+						myUnit2.repair(myUnit);
+				}
 			}
 		}
 	}

@@ -78,7 +78,7 @@ public class Commander {
 	public void refreshSquad() {
 		squad.clear();
 		for(Unit u: me.getUnits())
-			if((u.canAttack() && u.getType() != UnitType.Terran_SCV) || u.getType() == UnitType.Terran_Medic )
+			if(u.getType() != UnitType.Terran_SCV && !u.getType().isBuilding())
 				squad.add(u);
 		
 	}
@@ -155,7 +155,7 @@ public class Commander {
 	public Unit seeEnemy(Unit myUnit) {
     	int bestDistance = 999999;
     	Unit bestEnemy = null;
-    	for(Unit enemy: myUnit.getUnitsInRadius(100)) {
+    	for(Unit enemy: myUnit.getUnitsInRadius(500)) {
     		if(enemy.getPlayer() == game.enemy())
     			if(bestDistance > myUnit.getDistance(enemy)) {
     				bestDistance = myUnit.getDistance(enemy);
