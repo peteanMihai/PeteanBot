@@ -27,18 +27,24 @@ public class Individual {
 	public float fitnessScore;
 	public ArrayList<Integer> unitsGenome;
 	public Integer enemyRace = 0; //1 terran, 2 protoss, 3 zerg
+	public static int simplificationFactor = 20;
+	public static int winValue = 1000;
 	public Individual(ArrayList<Integer> existingGenome) {
 		this.unitsGenome = existingGenome;
 	} 
 	public Individual() {
 		this.unitsGenome = new ArrayList<>();
 		//bad code?
-		for(int i = 0; i < JsonParser.unitList.length; i ++) {
+		for(int i = 0; i < FileParser.unitList.length; i ++) {
 			this.unitsGenome.add(0);
 		}
 	}
-	public void calculateFitness(float buildingToKillRatio, int buildingScore, int killScore) {
-		fitnessScore = buildingToKillRatio * buildingScore + (1 - buildingToKillRatio) * killScore;
+	public void calculateFitness(float buildToKillRatio, int buildScore, int killScore, int timeElapsed, boolean won) {
+		fitnessScore = (buildToKillRatio * buildScore + (1 - buildToKillRatio) * killScore);
+		fitnessScore /= simplificationFactor; 
+		if(won){
+			fitnessScore += winValue;
+		}
 	}
 	
 	public static Individual createNew(Individual a, Individual b) {
@@ -55,7 +61,7 @@ public class Individual {
 		
 		float dominantRatio = b.fitnessScore / a.fitnessScore;
 		logger.log(Level.INFO, "New individual, start setting genes: " + newIndividual.unitsGenome.size());
-		for(int i = 0; i < JsonParser.unitList.length; i ++) {
+		for(int i = 0; i < FileParser.unitList.length; i ++) {
 			if(rn.nextFloat() > dominantRatio / 2)
 				newIndividual.unitsGenome.set(i, a.unitsGenome.get(i));
 			else
@@ -69,7 +75,7 @@ public class Individual {
 		if(mutationFactor < rn.nextFloat())
 			return;
 		//randomly pick one of the genes
-		int gene = rn.nextInt(JsonParser.unitList.length);
+		int gene = rn.nextInt(FileParser.unitList.length);
 		if(rn.nextFloat() > 0.5f || gene == 0) 
 			unitsGenome.set(gene, unitsGenome.get(gene) + rn.nextInt(mutationImpact));
 		else

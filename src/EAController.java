@@ -15,12 +15,13 @@ import java.util.logging.Level;
 import java.util.logging.Logger;
 
 public class EAController {
-	public  Logger logger = Logger.getLogger(ExampleBot.class.getName());
+	public Logger logger = Logger.getLogger(ExampleBot.class.getName());
 	public static float mutationFactor = 0.1f;
 	public static int mutationImpact = 3;
 	public static int initGenesLimit = 3;
 	public static int initNrUnitsLimit = 10;
 	public static int generationCounter = 0;
+	public static int populationLimit = 20;
 	public static String name;
 	public ArrayList<Individual> population;
 	
@@ -30,17 +31,30 @@ public class EAController {
     	return sdf.format(ts);
 	}
 	
-	public EAController(int populationLimit, float mutationFactor) {
-		name = "EASquadLog" + fileName() + ".txt";
+	public EAController(float mutationFactor) {
+		name = "EASquadLogTerran" + fileName() + ".txt";
 		Random rn = new Random();
 		EAController.mutationFactor = mutationFactor;
 		this.population = new ArrayList<Individual>(populationLimit);
 		for(int i = 0; i < populationLimit; i++) {
 			Individual ind = new Individual();
 			for(int j = 0; j < initGenesLimit; j++) {
-				ind.unitsGenome.set(rn.nextInt(JsonParser.unitList.length), rn.nextInt(initNrUnitsLimit));
+				ind.unitsGenome.set(rn.nextInt(FileParser.unitList.length), rn.nextInt(initNrUnitsLimit));
 			}
 			this.population.add(ind);
+		}
+	}
+	
+	public EAController(float mutationFactor, String fileName){
+		name = fileName;
+		EAController.mutationFactor = mutationFactor;
+		
+		try {
+			this.population = FileParser.readPopulationFromFile(fileName);
+			this.crossOverPopulation();
+		} catch (IOException e) {
+			// TODO Auto-generated catch block
+			e.printStackTrace();
 		}
 	}
 	
@@ -99,6 +113,7 @@ public class EAController {
 	public void writeResults(String fileName) throws IOException {
 		PrintWriter writer =  new PrintWriter(new BufferedWriter(new FileWriter(fileName, true)));
 		writer.println("GENERATION: " + generationCounter + " DONE WITH: " + averageFitness() + " AVERAGE FITNESS");
+		//writer.println("GENERATION DONE");
 		writer.close();
 	}
 }

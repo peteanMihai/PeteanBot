@@ -48,62 +48,17 @@ public class ExampleBot extends DefaultBWListener {
     private static  Iterator<Individual> itIndividual;
     
     public static Individual individual;
-    
-    private boolean bScouted = false;
-    
-    //bad scouting strats
-    private Unit scout = null;
-    
+      
     private ArrayList<Unit> bunkers = new ArrayList<Unit>();
     
-    private Stack<TilePosition> startingLocations = new Stack<TilePosition>();
+    public static Stack<TilePosition> startingLocations = new Stack<TilePosition>();
 
     public void run() {
     	mirror.getModule().setEventListener(this);
         mirror.startGame();	
     }
-    
 
    
-    
-    public void scout() {
-    	for(Unit myUnit: self.getUnits()) 
-    		if(myUnit.getType().canMove() && scout == null) {
-    			scout = myUnit;
-    			scout.stop();
-    			builder.workers.remove(scout);
-    			logger.log(Level.INFO, myUnit.getID() + " started scouting!");
-    		}
-    	if(commander.enemyBuildingMemory.size() > 0) {
-    		scout.move(self.getStartLocation().toPosition());
-    		builder.workers.add(scout);
-    		logger.log(Level.INFO, scout.getID() + " found the enemy!");
-    		scout = null;
-    		bScouted = true;
-    		
-    	}
-    	if(scout == null)
-    		return;
-    	if(scout.isIdle())
-    		scout.move(startingLocations.pop().toPosition());
-    }
-
-    
-    
-
-    public void evaluateGame() {
-    	if(game.elapsedTime() > 7200)
-    		game.leaveGame();
-		try {
-			builder.evaluateGame();
-			commander.evaluateGame();
-			strategyController.evaluateGame();
-			
-		}
-		catch(Exception e) {
-			e.printStackTrace();
-		}
-    }
     
     @Override
     public void onUnitCreate(Unit unit) {
@@ -158,6 +113,7 @@ public class ExampleBot extends DefaultBWListener {
         //This may take a few minutes if the map is processed first time!
         logger.log(Level.INFO, "Analyzing map...");
         try{
+        	
         	BWTA.readMap();
         	BWTA.analyze();
         }
@@ -166,11 +122,10 @@ public class ExampleBot extends DefaultBWListener {
         }
         
         logger.log(Level.INFO, "Map data ready");
-        bScouted = false;
-        scout = null;
+       
         bunkers = new ArrayList<Unit>();
         startingLocations = new Stack<TilePosition>();
-         
+        establishLocations(game);
         logger.log(Level.INFO, "EASquad setting");
         if(itIndividual == null || itIndividual.hasNext() == false) {
         	
@@ -200,22 +155,31 @@ public class ExampleBot extends DefaultBWListener {
         Builder.gas = 0;
         Builder.minerals = 0;
         //initialize starting locations for scout
-        for(TilePosition location: game.getStartLocations()) {
-    		if(location != self.getStartLocation())
-    			startingLocations.push(location);
-    	}
-       
+
         logger.log(Level.INFO, "initialization complete");
     } 
 
+    public static void establishLocations(Game game) {
+        for(TilePosition location: game.getStartLocations()) {
+    		//if(location != self.getStartLocation())
+    			startingLocations.push(location);
+    	}
+       
+    }
+    
     @Override
     public void onEnd(boolean isWinner) {
     	//code for measuring individuals, calculating fitness, etc.
-    	individual.calculateFitness(0.2f, self.getBuildingScore(), self.getKillScore());
+    	boolean won = self.isVictorious();
+    	individual.calculateFitness(0.2f, self.getBuildingScore(), self.getKillScore(), game.elapsedTime(), won);
     	PrintWriter writer;
 		try {
+			String toPrint = "";
 			writer = new PrintWriter(new BufferedWriter(new FileWriter(eaSquad.name, true)));
-			writer.println(individual.unitsGenome.toString() + " FITNESS: " + individual.fitnessScore + " TIME ELAPSED: " + game.elapsedTime());
+			toPrint += (individual.unitsGenome.toString() + " FITNESS: " + (int)individual.fitnessScore + " TIME ELAPSED: " + game.elapsedTime());
+			if(won)
+				toPrint += " WON GAME ";
+			writer.println(toPrint);
 			writer.close();
 		} catch (IOException e) {
 			// TODO Auto-generated catch block
@@ -226,50 +190,50 @@ public class ExampleBot extends DefaultBWListener {
     }
     
     public void reset() {
+    	BWTA.cleanMemory();
     	commander.reset();
     	builder.reset();
     	commander = null;
     	builder = null;
     	strategyController  = null;
-    	bScouted = false;
-    	scout = null;
     	bunkers = new ArrayList<Unit>();
     	startingLocations = new Stack<TilePosition>();
     }
     
-    @Override
-    public void onFrame() {
-    	
-    	//debug business
+    public void displayDebugInformation() {
     	int gasMiners = 0;
     	for(Unit u: builder.workers) {
     		game.drawTextMap(u.getPosition(),"" + u.isIdle() + " " + u.getID());
     		if(u.isGatheringGas())
     			gasMiners++;
     	}
+    	//debug business
         game.drawTextScreen(10, 10, "Is supply blocked: " + (self.supplyUsed() >= self.supplyTotal()));
         game.drawTextScreen(10, 20, "Worker count: " + builder.workers.size());
         game.drawTextScreen(10, 30, "Squad size: " + commander.squad.size());
         game.drawTextScreen(10, 40, "buildOrder (" + builder.buildOrder.size() + ")" + builder.buildOrder);
     	game.drawTextScreen(10, 50, "beingBuilt: " + builder.areBeingBuilt);
     	game.drawTextScreen(10, 60, "gas minners: " + gasMiners);    	
-        if(scout != null)
-        	game.drawCircleMap(scout.getPosition(), 3, Color.Green);
-       
-        
-        if(!bScouted)
-        	this.scout();
-        
+        if(commander.scout != null)
+        	game.drawCircleMap(commander.scout.getPosition(), 3, Color.Green);
+    }
+    
+    @Override
+    public void onFrame() { 
         this.evaluateGame();
-       
-        //logger.log(Level.INFO, "evaluate game");
-        //logger.log(Level.INFO, "trainingbois");
-       	}
+    }
 
-
+    public void evaluateGame() {
+    	displayDebugInformation();
+    	if(game.elapsedTime() > 7200)
+    		game.leaveGame();
+			builder.evaluateGame();
+			commander.evaluateGame();
+			strategyController.evaluateGame();	
+    }
     
     public static void main(String[] args) {
-    	eaSquad = new EAController(10, 0.5f);
+    	eaSquad = new EAController(0.5f);
     	itIndividual = eaSquad.population.iterator();
     	assert(itIndividual.hasNext());
         new ExampleBot().run();

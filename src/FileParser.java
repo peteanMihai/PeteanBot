@@ -3,8 +3,11 @@ import java.io.FileNotFoundException;
 import java.io.FileReader;
 import java.io.IOException;
 import java.io.PrintWriter;
+import java.nio.file.Files;
+import java.nio.file.Paths;
 import java.util.ArrayList;
 import java.util.HashMap;
+import java.util.Scanner;
 
 import com.google.gson.Gson;
 
@@ -14,7 +17,7 @@ import bwapi.UnitType;
 
 
 
-public class JsonParser{
+public class FileParser{
 	private static Gson gson = new Gson();
 	public static UnitType[] unitList = {
 			UnitType.Terran_Firebat,
@@ -24,7 +27,6 @@ public class JsonParser{
 			UnitType.Terran_Medic,
 			UnitType.Terran_Siege_Tank_Tank_Mode,
 			UnitType.Terran_Vulture,
-			UnitType.Terran_Vulture_Spider_Mine,
 			UnitType.Terran_Battlecruiser,
 			UnitType.Terran_Dropship,
 			UnitType.Terran_Science_Vessel,
@@ -41,7 +43,6 @@ public class JsonParser{
 	 	stringToUnitType.put("Terran_Medic", UnitType.Terran_Medic);
 	 	stringToUnitType.put("Terran_Siege_Tank_Tank_Mode", UnitType.Terran_Siege_Tank_Tank_Mode);
 	 	stringToUnitType.put("Terran_Vulture", UnitType.Terran_Vulture);
-	 	stringToUnitType.put("Terran_Vulture_Spider_Mine", UnitType.Terran_Vulture_Spider_Mine);
 	 	stringToUnitType.put("Terran_Battlecruiser", UnitType.Terran_Battlecruiser);
 	 	stringToUnitType.put("Terran_Dropship", UnitType.Terran_Dropship);
 	 	stringToUnitType.put("Terran_Science_Vessel", UnitType.Terran_Science_Vessel);
@@ -61,6 +62,38 @@ public class JsonParser{
 		writer.close();
 	}
 	
+	public static ArrayList<Individual> readPopulationFromFile(String filename) throws IOException{
+		ArrayList<Individual> population = new ArrayList<>();
+		Scanner in = new Scanner(new FileReader(filename));
+		ArrayList<Individual> result = new ArrayList<>();
+		while(in.hasNextLine()) {
+			Individual individual = new Individual();
+			String line = in.nextLine();
+			if(line.contains("GENERATION")) {
+				result.clear();
+				result.addAll(population);
+				String[] tokLine = line.split(" ");
+				EAController.generationCounter = Integer.parseInt(tokLine[1]);
+				population.clear();
+				continue;
+			}
+			int endOfGenomeAndFitness = line.indexOf("TIME");
+			line = line.substring(0, endOfGenomeAndFitness);
+			line = line.replace(",", "");
+			line = line.replace("[", "");
+			line = line.replace("]", "");
+			line = line.replace("FITNESS: ", "");
+			System.out.println(line);
+			String[] tokLine = line.split(" ");
+			for(int i = 0; i < unitList.length; i++) {
+				individual.unitsGenome.set(i, Integer.parseInt(tokLine[i]));
+			}
+			individual.fitnessScore = Integer.parseInt(tokLine[unitList.length]);
+			System.out.println("Got individual genome and fitness: " + individual.unitsGenome + " " + individual.fitnessScore);
+			population.add(individual);
+		}
+		return result;
+	}
 	
 	public static HashMap<UnitType, Integer> loadSquadInd(ArrayList<Integer> genome){
 		//if we try to access the global one it crashes!
@@ -72,7 +105,6 @@ public class JsonParser{
 				UnitType.Terran_Medic,
 				UnitType.Terran_Siege_Tank_Tank_Mode,
 				UnitType.Terran_Vulture,
-				UnitType.Terran_Vulture_Spider_Mine,
 				UnitType.Terran_Battlecruiser,
 				UnitType.Terran_Dropship,
 				UnitType.Terran_Science_Vessel,
@@ -86,7 +118,7 @@ public class JsonParser{
 		}
 		System.out.println(safeUnitList.toString());
 		for(int i = 0; i < unitList.length; i++) {
-				if(genome.get(i) != null && genome.get(i) > 0 && JsonParser.unitList[i] != null) {
+				if(genome.get(i) != null && genome.get(i) > 0 && FileParser.unitList[i] != null) {
 					result.put(safeUnitList.get(i), genome.get(i).intValue());
 					
 				}

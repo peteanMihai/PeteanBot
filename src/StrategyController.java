@@ -12,7 +12,9 @@ import strategies.AStrategy;
 
 public class StrategyController {
 	private static int macroProductionBuildingsLimit = 3;
-	
+	private static int macroMineralThreshold = 500;
+	private static int macroGasThreshhold = 200;
+	private static int macroMinimumElapsedTime = 40;
 	
 	
 	public  Logger logger = Logger.getLogger(ExampleBot.class.getName());
@@ -33,10 +35,11 @@ public class StrategyController {
 		strategies.add(a);
 	}
 	
+	//this is a strategy to keep pumping out factories 
 	public void macro() {
-		if(builder.minerals > 500 && 
-				   builder.gas > 200 && 
-				   game.elapsedTime() > 40 &&
+		if(builder.minerals > macroMineralThreshold && 
+				   builder.gas > macroGasThreshhold && 
+				   game.elapsedTime() > macroMinimumElapsedTime &&
 				   builder.buildOrder.size() == 0){
 			HashMap<UnitType, Integer> idealSquad = commander.idealSquad;
 			HashSet<UnitType> productionList = new HashSet<UnitType>();
@@ -61,8 +64,8 @@ public class StrategyController {
 		}
 	}
 	
-	//this is a strategy
-	public void upgradeFirstTier() {
+	//this is a hardcoded strategy
+	public void upgradeBio() {
 		if(builder.minerals > 500 && 
 		   builder.gas > 300 && 
 		   game.elapsedTime() > 60 &&
@@ -82,9 +85,43 @@ public class StrategyController {
 		}
 		
 	}
+	//same for mech
+	public void upgradeMech() {
+		if(builder.minerals > 500 && 
+		   builder.gas > 300 && 
+		   game.elapsedTime() > 60 &&
+		   builder.buildOrder.size() == 0){
+		   if(!builder.ownedBuildingTypes.contains(UnitType.Terran_Armory) && !builder.alreadyBuilding(UnitType.Terran_Armory)) {
+			builder.addToBuildStack(UnitType.Terran_Armory);
+		   }
+		   if(builder.ownedBuildingTypes.contains(UnitType.Terran_Armory)) {
+			   int wepUp = 0, armUp = 0;
+			   wepUp = me.getUpgradeLevel(UpgradeType.Terran_Vehicle_Weapons);
+			   armUp = me.getUpgradeLevel(UpgradeType.Terran_Vehicle_Plating);
+			   if(armUp < wepUp)
+				   builder.startUpgrade(UpgradeType.Terran_Vehicle_Plating);
+			   else
+				   builder.startUpgrade(UpgradeType.Terran_Vehicle_Weapons);
+		   }
+		}
+		
+	}
 	
 	public void evaluateGame() {
+		boolean haveBio = false;
+		boolean haveMech = false;
+		for(UnitType u : commander.idealSquad.keySet()) {
+			if(u.isMechanical() && !u.isFlyer())
+				haveMech = true;
+			if(u.isOrganic())
+				haveBio = true;
+		}
+		if(haveBio)
+			upgradeBio();
+		if(haveMech)
+			upgradeMech();
+		if(game.elapsedTime() % 60 != 0)
+			return;
 		macro();
-		upgradeFirstTier();
 	}
 }

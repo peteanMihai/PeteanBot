@@ -6,6 +6,7 @@ import java.util.List;
 
 import bwapi.Color;
 import bwapi.Game;
+import bwapi.Order;
 import bwapi.Player;
 import bwapi.Position;
 import bwapi.TilePosition;
@@ -27,13 +28,16 @@ public class Commander {
 	public HashMap<UnitType, Integer> idealSquad;
 	public HashSet<Position> enemyBuildingMemory;
 	public TilePosition myTarget;
+	//bad scouting strats
+    public boolean bScouted = false;
+    public static Unit scout = null;
 	public Commander(Game theGame, Player me) {
 		this.game = theGame;
 		this.me = me;
 		squad = new HashSet<Unit>();
 		idealSquad = new HashMap<UnitType, Integer>();
 		enemyBuildingMemory = new HashSet<Position>();
-		JsonParser.init();
+		FileParser.init();
 		initSquadFile();
 	}
 	
@@ -43,12 +47,14 @@ public class Commander {
 		squad = new HashSet<Unit>();
 		idealSquad = new HashMap<UnitType, Integer>();
 		enemyBuildingMemory = new HashSet<Position>();
-		JsonParser.init();
+		bScouted = false;
+		scout = null;
+		FileParser.init();
 		initSquad(idealSquadInt);
 	}
 	
 	public void initSquad(ArrayList<Integer> idealSquadInt) {
-		idealSquad = JsonParser.loadSquadInd(idealSquadInt);
+		idealSquad = FileParser.loadSquadInd(idealSquadInt);
 		logger.log(Level.INFO, "Ideal squad loaded: " + idealSquad);
 	}
 	
@@ -60,10 +66,42 @@ public class Commander {
 		return builder;
 	}
 	
+	public void scout() {
+    	for(Unit myUnit: me.getUnits()) 
+    		if(myUnit.getType().canMove() && scout == null) {
+    			scout = myUnit;
+    			scout.stop();
+    			builder.workers.remove(scout);
+    			logger.log(Level.INFO, myUnit.getID() + " started scouting!");
+    		}
+    	
+    	if(enemyBuildingMemory.size() > 0) {
+    		scout.move(me.getStartLocation().toPosition());
+    		builder.workers.add(scout);
+    		logger.log(Level.INFO, scout.getID() + " found the enemy!");
+    		scout = null;
+    		bScouted = true;
+    	}
+    	if(scout == null)
+    		return;
+    	if(scout.getOrder() == Order.Move)
+    		return;
+    	else {
+    		System.out.println("IM GOING TO " + ExampleBot.startingLocations.size());
+    		Position pos = ExampleBot.startingLocations.pop().toPosition();
+    		game.drawLineMap(scout.getPosition(), pos, Color.Green);
+    		scout.move(pos);
+    	}
+    }
+	
+	public boolean isScout(Unit u) {
+		return scout == u;
+	}
+	
 	public void initSquadFile() {
 		try {
-			JsonParser.init();
-			idealSquad = JsonParser.loadSquad("marineMedic.json");
+			FileParser.init();
+			idealSquad = FileParser.loadSquad("marineMedic.json");
 		} catch (FileNotFoundException e) {
 			// TODO Auto-generated catch block
 			e.printStackTrace();
@@ -235,6 +273,8 @@ public class Commander {
 	
 	public void evaluateGame() {
 		myTarget = establishTarget();
+		if(!bScouted)
+	        this.scout();
 		refreshSquad();
 		defendBase();
 		if(validateSquad(squad, idealSquad) && myTarget != null)
@@ -243,14 +283,7 @@ public class Commander {
 			sendMarines(squad, myTarget);
 		}
 		for(Unit u: squad) {
-			try {
-				//logger.log(Level.INFO, "before evaluate");
 				evaluateThreat(u);
-				//logger.log(Level.INFO, "after evaluate");
-			}
-			catch(Exception e) {
-				e.printStackTrace();
-			}
 		}
 	}
 	

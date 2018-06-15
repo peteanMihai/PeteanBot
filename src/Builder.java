@@ -6,6 +6,7 @@ import java.util.List;
 import java.util.Map;
 
 import bwapi.Game;
+import bwapi.Order;
 import bwapi.Pair;
 import bwapi.Player;
 import bwapi.TechType;
@@ -132,8 +133,7 @@ public class Builder {
 		}
 
 		if (ret == null)
-			game.printf("Unable to find suitable build position for " + buildingType.toString() + " with builder: "
-					+ builder.getID());
+			buildOrder.remove(buildingType);
 		return ret;
 	}
 
@@ -164,6 +164,8 @@ public class Builder {
 	public boolean buildClose(UnitType building, TilePosition place) {
 		boolean startedBuilding = false;
 		for (Unit myUnit : workers) {
+			if(commander.isScout(myUnit))
+				continue;
 			if (myUnit.getHitPoints() <= 0 || !myUnit.canMove())
 				continue; // really now
 			if (myUnit.getBuildType() != UnitType.None)
@@ -182,14 +184,7 @@ public class Builder {
 			// an occupied location
 			logger.log(Level.INFO,
 					myUnit.getID() + " is building a: " + building + "(" + myUnit.getBuildType() + ") at " + buildTile
-							+ "minerals: " + me.minerals() + "(locked: " + minerals + ") stack:" + buildOrder);// + "
-																												// stack:
-																												// " +
-																												// areBeingBuilt
-																												// + "
-																												// occLoc:
-																												// " +
-																												// occupiedLocations);
+							+ "minerals: " + me.minerals() + "(locked: " + minerals + ") stack:" + buildOrder);	
 			startedBuilding = true;
 			break;
 		}
@@ -220,6 +215,8 @@ public class Builder {
 	public void sendIdleMine() {
 		// if it's a worker and it's idle, send it to the closest mineral patch
 		for (Unit myUnit : me.getUnits()) {
+			if(commander.isScout(myUnit))
+				continue;
 			if (myUnit.isIdle() && myUnit.getType() == UnitType.Terran_SCV) {
 				Unit closestMineral = null;
 				// find the closest mineral
@@ -443,11 +440,23 @@ public class Builder {
 	
 	public void repair() {
 		for(Unit myUnit : me.getUnits()) {
+			if(commander.isScout(myUnit))
+				continue;
 			if(myUnit.getType().isBuilding() && 
-					!myUnit.isBeingConstructed() && 
+					!myUnit.isBeingConstructed() &&
 					(myUnit.getHitPoints() < myUnit.getType().maxHitPoints())){
+				for(Unit myUnit2 : me.getUnits())
+					if(myUnit2.getOrder() == Order.Repair)
+						return;
+				Unit repairer = null;
 				for(Unit myUnit2 : workers){
-						myUnit2.repair(myUnit);
+						repairer = myUnit2;
+						logger.log(Level.INFO, "repairing: " + myUnit.getType() + " with " + myUnit2.getID());
+						break;
+				}
+				if(repairer != null) {
+				//workers.remove(repairer);
+				repairer.repair(myUnit);
 				}
 			}
 		}
@@ -473,6 +482,8 @@ public class Builder {
 		List<Unit> candidateGasWorkers = new ArrayList<Unit>();
 		int nrOfGasMiners = 0;
 		for (Unit worker : workers) {
+			if(commander.isScout(worker))
+				continue;
 			if (worker.isGatheringGas())
 				nrOfGasMiners++;
 			else if (candidateGasWorkers.size() < 2 && worker.isGatheringMinerals()) {
@@ -482,7 +493,10 @@ public class Builder {
 		for (int i = 0; i < 1 - nrOfGasMiners; i++) {
 			if (gasExtractors.size() == 0)
 				break;
-			candidateGasWorkers.get(i).gather(gasExtractors.iterator().next());
+			if(candidateGasWorkers.isEmpty())
+				break;
+			if(candidateGasWorkers.get(i) != null)
+				candidateGasWorkers.get(i).gather(gasExtractors.iterator().next());
 		}
 
 		/*
@@ -502,7 +516,7 @@ public class Builder {
 			// logger.log(Level.INFO, u + " is locking " + u.mineralPrice() + " minerals and
 			// " + u.gasPrice() + " gas");
 		}
-		game.drawTextScreen(10, 170, "remaining resources: " + minerals + " " + gas);
+		//game.drawTextScreen(10, 170, "remaining resources: " + minerals + " " + gas);
 	}
 
 	public void evaluateGame() {
@@ -513,70 +527,25 @@ public class Builder {
 		updateStackForIdealSquad();
 		lockResources();
 		// train another worker for minerals
-		long startTime, stopTime, duration;
-		startTime = System.nanoTime();
 		minerals();
-		stopTime = System.nanoTime();
-		game.drawTextScreen(10, 70, "builderMinerals: " + (stopTime - startTime) / 1000000);
-
-		startTime = System.nanoTime();
-		// extractorCheck();
-		stopTime = System.nanoTime();
-		game.drawTextScreen(10, 80, "builderExtractorCheckTimer: " + (stopTime - startTime) / 1000000);
-
-		startTime = System.nanoTime();
 		// evaluate what buildings are being built at this point
 		refreshAreBeingBuiltSet();
-		stopTime = System.nanoTime();
-		game.drawTextScreen(10, 90, "builderRefresh: " + (stopTime - startTime) / 1000000);
-
-		/*
-		startTime = System.nanoTime();
-		// evaluateTech();
-		stopTime = System.nanoTime();
-		game.drawTextScreen(10, 100, "builderEvaluateTech: " + (stopTime - startTime) / 1000000);
-
-		startTime = System.nanoTime();
-		// upgrades();
-		stopTime = System.nanoTime();
-		game.drawTextScreen(10, 110, "builderUpgrades: " + (stopTime - startTime) / 1000000);
-
-		startTime = System.nanoTime();
-		// factories();
-		stopTime = System.nanoTime();
-		game.drawTextScreen(10, 120, "builderFactories: " + (stopTime - startTime) / 1000000);
-
-		startTime = System.nanoTime();
-		// bunker();
-		stopTime = System.nanoTime();
-		game.drawTextScreen(10, 130, "builderBunker: " + (stopTime - startTime) / 1000000);
-		*/
-		startTime = System.nanoTime();
 		supply();
-		stopTime = System.nanoTime();
-		game.drawTextScreen(10, 100, "builderSupply: " + (stopTime - startTime) / 1000000);
-
 		for(Unit u: me.getUnits())
 			if(u.getType() == UnitType.Terran_Refinery)
-				buildOrder.remove(UnitType.Terran_Refinery);
+				buildOrder.remove(UnitType.Terran_Refinery);	
+		buildFromStack();	
 		
-		startTime = System.nanoTime();
-		buildFromStack();
-		stopTime = System.nanoTime();
-		game.drawTextScreen(10, 110, "builderBuildFromStack: " + (stopTime - startTime) / 1000000);
-
-		startTime = System.nanoTime();
 		// worker orders
 		sendIdleMine();
-		stopTime = System.nanoTime();
-		game.drawTextScreen(10, 120, "builderSendIdleMine: " + (stopTime - startTime) / 1000000);
-
 		extractorCheck();
 		trainArmy();
 		ArrayList<Unit> toRemoveBusyWorkers = new ArrayList<>();
 		mineGas();
 		for (Unit t : busyWorkers)
 			if (t.isIdle()) {
+				if(commander.isScout(t))
+					continue;
 				toRemoveBusyWorkers.add(t);
 				workers.add(t);
 				logger.log(Level.INFO, t.getID() + " is no longer busy!");
@@ -584,6 +553,7 @@ public class Builder {
 		for(Unit t : toRemoveBusyWorkers) {
 			busyWorkers.remove(t);
 		}
+		
 	}
 
 	public void refreshAreBeingBuiltSet() {
